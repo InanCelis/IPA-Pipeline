@@ -1,0 +1,12 @@
+[17-Jul-2025 07:59:38 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function wp_send_json_success() in /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php:25
+Stack trace:
+#0 /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php(13): FormDataController->getPropertyTypes()
+#1 /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php(29): FormDataController->__construct()
+#2 {main}
+  thrown in /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php on line 25
+[17-Jul-2025 08:06:34 UTC] PHP Fatal error:  Uncaught Error: Class "WP_REST_Response" not found in /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php:30
+Stack trace:
+#0 /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php(13): FormDataController->getPropertyTypes()
+#1 /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php(43): FormDataController->__construct()
+#2 {main}
+  thrown in /home/ipawills/public_html/wp-content/themes/houzez/template-parts/search-v2/app/controller/FormDataController.php on line 30

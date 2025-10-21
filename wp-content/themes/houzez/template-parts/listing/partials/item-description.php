@@ -1,0 +1,1 @@
+<div class="item-short-description"><?php echo houzez_get_excerpt(12); ?></div>

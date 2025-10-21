@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Empty Kinsta Website</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        html {
+            box-sizing: border-box;
+            line-height: 1.15;
+            font-family: 'Inter', sans-serif;
+            -webkit-text-size-adjust: 100%;
+        }
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+        body {
+            padding: 30px 30px 90px;
+            margin: 0;
+            background-color: #f9f5f3;
+            color: #1c1819;
+        }
+        main {
+            display: block;
+        }
+        h1 {
+            font-size: 2em;
+            font-weight: 700;
+            margin: 1em 0 0;
+            line-height: 1.33;
+        }
+        a {
+            background-color: transparent;
+            color: #a92200;
+            text-decoration: underline;
+        }
+        img {
+            border-style: none;
+        }
+        figure {
+            margin: 0;
+        }
+        .button {
+            padding: 0.8em 1.2em;
+            font-size: 0.9rem;
+            background-color: #1c1819;
+            color: #f9f5f3;
+            text-decoration: none;
+            border-radius: 0.35rem;
+        }
+        .button:hover {
+            background-color: #363132;
+        }
+        .button--ghost {
+            background: #fff;
+            border: 1px solid #eaddd5;
+            color: #1c1819;
+        }
+        .button--ghost:hover {
+            background: #f9f5f3;
+            border: 1px solid #cab2aa;
+        }
+        .empty-container {
+            width: 100%;
+            max-width: 848px;
+            margin: 0 auto;
+        }
+        .empty-container__header {
+            margin-bottom: 2em;
+        }
+        .empty-container__header figure {
+            width: 80px;
+            display: block;
+        }
+        .empty-container__header figure a {
+            text-decoration: none;
+        }
+        .empty-container-boxes__item {
+            width: 100%;
+            height: 333px;
+            border-radius: 8px;
+            background-color: #fff;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 22px;
+            border: 1px solid #eaddd5;
+        }
+        .empty-container-boxes__item figure svg {
+            width: 60px;
+            height: 60px;
+        }
+        @media screen and (min-width: 715px) {
+            .empty-container-boxes {
+                display: flex;
+            }
+            .empty-container-boxes__item {
+                width: 413px;
+            }
+            .empty-container-boxes__item:nth-child(odd) {
+                margin-right: 11px;
+            }
+            .empty-container-boxes__item:nth-child(even) {
+                margin-left: 11px;
+            }
+        }
+        .empty-container-boxes__item h2 {
+            font-weight: 400;
+            font-size: 1em;
+            line-height: 1.6em;
+            margin: 1.6em 0;
+        }
+        .empty-container__footer {
+            border-radius: 8px;
+            background-color: #ffffff;
+            font-size: 1em;
+            line-height: 1.6em;
+            border: 1px solid #eaddd5;
+        }
+        .empty-container__footer-section {
+            padding: 46px;
+            margin: 0;
+        }
+        .empty-container__footer-section:first-child {
+            border-bottom: 1px solid #eaddd5;
+        }
+
+        #how-to-migrate h2 {
+            width: 100%;
+            max-width: 340px;
+        }
+        #how-to-install-wordpress h2 {
+            width: 100%;
+            max-width: 260px;
+        }
+        #contact-support {
+            text-align: center;
+        }
+        @media screen and (min-width: 680px) {
+            #contact-support {
+                text-align: left;
+                display: flex;
+                align-items: center;
+            }
+            #contact-support .button {
+                margin-left: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="empty-container">
+        <header class="empty-container__header">
+            <figure>
+                <a href="https://kinsta.com/?utm_source=kinsta-empty-site&utm_medium=empty-site" rel="nofollow noopener noreferrer" target="_blank">
+                    <svg id="Kinsta_logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 324.26 82.1"><defs><style>.cls-1{fill:#261e1e;}</style></defs><g id="Layer_3"><path class="cls-1" d="m0,80.44h14.22v-25.83h25.35c3.16,0,4.74,1.54,4.74,4.62v21.21h14.22v-18.36c0-4.74-.83-8.47-2.49-11.2-1.66-2.72-4.34-4.72-8.06-5.98,3.4-1.58,6-4.24,7.82-8,1.82-3.75,2.72-8.31,2.72-13.68v-1.54h-14.22v2.72c0,5.92-1.3,10.31-3.91,13.15-2.61,2.84-6.68,4.27-12.2,4.27h-13.98V10.9H0v69.54ZM76.53,17.06c2.61,0,4.74-.79,6.4-2.37,1.66-1.58,2.49-3.63,2.49-6.16s-.81-4.58-2.43-6.16c-1.62-1.58-3.77-2.37-6.46-2.37s-4.74.79-6.4,2.37c-1.66,1.58-2.49,3.63-2.49,6.16s.83,4.58,2.49,6.16c1.66,1.58,3.79,2.37,6.4,2.37m228.77,51.3h-22.51c-3.16,0-4.74-1.54-4.74-4.62v-25.35c0-3.08,1.58-4.62,4.74-4.62h22.51c3.16,0,4.74,1.54,4.74,4.62v25.35c0,3.08-1.58,4.62-4.74,4.62m-14.34,13.74c4.34,0,8.09-.69,11.26-2.07,3.16-1.38,6.04-3.57,8.65-6.58v6.99h13.39V21.68h-13.39v6.99c-2.61-3-5.49-5.19-8.65-6.58-3.16-1.38-6.91-2.07-11.26-2.07-8.93,0-15.88,2.82-20.85,8.47-4.98,5.65-7.46,13.17-7.46,22.57s2.49,16.92,7.46,22.57c4.98,5.65,11.93,8.47,20.85,8.47m-42.65-1.66h12.2v-12.56h-12.8c-3.16,0-4.74-1.54-4.74-4.62v-29.03h17.53v-12.56h-17.53v-12.68h-13.03v7.7c0,3.32-1.58,4.98-4.74,4.98h-7.94v12.56h11.49v27.01c0,6,1.72,10.7,5.15,14.1,3.44,3.4,8.23,5.09,14.39,5.09m-84.71,0h27.96c16.03,0,24.05-5.73,24.05-17.18,0-5.21-1.56-9.18-4.68-11.91-3.12-2.72-8.27-4.6-15.46-5.63l-11.85-1.78c-3.4-.55-5.61-1.13-6.63-1.72-1.03-.59-1.54-1.64-1.54-3.14v-1.07c0-1.34.36-2.31,1.07-2.9.71-.59,1.93-.89,3.67-.89h31.51v-12.56h-26.06c-8.06,0-14.14,1.48-18.25,4.44-4.11,2.96-6.16,7.37-6.16,13.21,0,5.06,1.6,8.93,4.8,11.61,3.2,2.69,8.43,4.58,15.7,5.69l11.49,1.66c2.45.32,4.22.63,5.33.95,1.1.32,1.86.75,2.25,1.3.39.55.59,1.34.59,2.37v1.18c0,1.34-.38,2.31-1.13,2.9-.75.59-1.95.89-3.61.89h-33.05v12.56Zm-68.12,0h14.22v-42.06c0-3.08,1.58-4.62,4.74-4.62h20.73c3.16,0,4.74,1.54,4.74,4.62v42.06h14.22v-40.04c0-6.16-2.03-11.1-6.1-14.81-4.07-3.71-9.89-5.57-17.47-5.57-4.58,0-8.75.75-12.5,2.25-3.75,1.5-6.81,3.63-9.18,6.4v-6.99h-13.39v58.76Zm-26.06,0h14.22V21.68h-14.22v58.76Z"/></g></svg>
+                </a>
+            </figure>
+            <h1>You've just created an empty site 👋</h1>
+        </header>
+        <main class="empty-container__main">
+            <div class="empty-container-boxes">
+                <div class="empty-container-boxes__item" id="how-to-install-wordpress">
+                    <figure>
+                        <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.891 5.788C18.614 7.11044 18.992 8.59381 18.99 10.101C18.9904 11.6742 18.5777 13.22 17.7933 14.5837C17.0089 15.9475 15.8801 17.0814 14.52 17.872L17.266 9.933C17.779 8.651 17.95 7.624 17.95 6.714C17.9504 6.40438 17.9307 6.09507 17.891 5.788ZM11.24 5.875C11.583 5.85813 11.9252 5.82878 12.266 5.787C12.751 5.724 12.694 5.012 12.21 5.038C12.21 5.038 10.747 5.15 9.81 5.15C8.923 5.15 7.435 5.025 7.435 5.025C6.948 5.001 6.885 5.738 7.374 5.763C7.374 5.763 7.823 5.815 8.312 5.838L9.711 9.676L7.736 15.575L4.462 5.851C5.003 5.825 5.49 5.768 5.49 5.768C5.977 5.705 5.92 4.993 5.435 5.021C5.435 5.021 3.98 5.136 3.04 5.136C2.873 5.136 2.675 5.129 2.465 5.123C4.093 2.726 6.862 1.113 10 1.113C12.341 1.113 14.471 2.007 16.071 3.473C16.033 3.471 15.995 3.465 15.954 3.465C15.071 3.465 14.444 4.235 14.444 5.061C14.444 5.801 14.871 6.43 15.327 7.169C15.67 7.769 16.069 8.539 16.069 9.65C16.069 10.413 15.774 11.312 15.384 12.549L14.488 15.536L11.238 5.861L11.24 5.875ZM10 19.087C9.14028 19.0878 8.28489 18.9653 7.46 18.723L10.157 10.885L12.92 18.457C12.941 18.501 12.962 18.542 12.985 18.581C12.0258 18.9174 11.0165 19.0892 10 19.089V19.087ZM1.01 10.101C1.00854 8.84045 1.27368 7.59385 1.788 6.443L6.075 18.192C4.55646 17.4547 3.27611 16.3048 2.38039 14.874C1.48468 13.4431 1.00977 11.7891 1.01 10.101ZM10 0.100998C4.487 0.100998 0 4.588 0 10.101C0 15.614 4.487 20.101 10 20.101C15.513 20.101 20 15.614 20 10.101C20 4.588 15.513 0.100998 10 0.100998Z" fill="#0A0A0A"/></svg>
+                    </figure>
+                    <h2>Did you mean to install WordPress?</h2>
+                    <a href="https://kinsta.com/docs/wordpress-hosting/wordpress-getting-started/manually-installing-wordpress/?utm_source=kinsta-empty-site&utm_medium=empty-site" target="_blank" rel="nofollow noopener noreferrer" class="button">Learn how to install WordPress</a>
+                </div>
+                <div class="empty-container-boxes__item" id="how-to-migrate">
+                    <figure>
+                        <svg width="56" height="77" viewBox="0 0 56 77" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.444 70.718V71.05C5.444 72.1859 5.89525 73.2753 6.69846 74.0785C7.50168 74.8818 8.59108 75.333 9.727 75.333H50.415C51.5506 75.3327 52.6396 74.8815 53.4425 74.0785C54.2455 73.2756 54.6967 72.1866 54.697 71.051V17.513C54.697 16.3772 54.2459 15.288 53.4429 14.4848C52.6399 13.6816 51.5507 13.2303 50.415 13.23H49.612" stroke="#cab2aa" stroke-width="2"/><path d="M49.544 62.02V11.09C49.544 10.6589 49.4591 10.232 49.2941 9.83365C49.1291 9.43534 48.8873 9.07342 48.5824 8.76857C48.2776 8.46372 47.9157 8.22189 47.5173 8.0569C47.119 7.89192 46.6921 7.807 46.261 7.807H4.99C4.55887 7.807 4.13196 7.89192 3.73365 8.0569C3.33534 8.22189 2.97342 8.46372 2.66857 8.76857C2.36371 9.07342 2.12189 9.43534 1.95691 9.83365C1.79192 10.232 1.707 10.6589 1.707 11.09V67.936C1.707 68.8067 2.05289 69.6417 2.66857 70.2574C3.28425 70.8731 4.1193 71.219 4.99 71.219H40.219C41.077 71.219 41.901 70.882 42.515 70.282L48.558 64.367C49.188 63.749 49.544 62.903 49.544 62.02Z" stroke="#cab2aa" stroke-width="2"/><path d="M41.476 67.012V69.742C41.476 70.22 42.052 70.458 42.389 70.122L48.868 63.642C48.9428 63.5671 48.9936 63.4718 49.0142 63.368C49.0348 63.2642 49.0241 63.1566 48.9835 63.0589C48.9429 62.9612 48.8743 62.8777 48.7863 62.8189C48.6983 62.7602 48.5948 62.7289 48.489 62.729H45.759C44.6231 62.729 43.5337 63.1802 42.7305 63.9835C41.9272 64.7867 41.476 65.8761 41.476 67.012Z" stroke="#cab2aa" stroke-width="2"/><path d="M29.9 6.399C28.05 2.639 24.095 0.333 19.836 0.547C14.207 0.817 9.8 5.453 9.8 11.095V37.958C9.8 40.218 10.754 42.435 12.423 44.038C14.012 45.561 16.068 46.4 18.228 46.4H18.367C22.931 46.326 26.647 42.636 26.647 38.172V13.812C26.647 13.168 26.113 12.647 25.454 12.647C24.796 12.647 24.262 13.168 24.262 13.811V38.172C24.262 39.799 23.594 41.317 22.382 42.445C21.7841 42.9999 21.081 43.4293 20.3142 43.7078C19.5475 43.9862 18.7327 44.108 17.918 44.066C14.703 43.912 12.185 41.247 12.185 38V11.062C12.185 6.725 15.562 3.129 19.874 2.877C22.864 2.709 25.702 4.139 27.3 6.623L27.372 6.73H30.067L29.905 6.394L29.9 6.399Z" fill="url(#paint0_radial_2219_235)"/><defs><radialGradient id="paint0_radial_2219_235" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(29.4949 5.88461) rotate(122.743) scale(72.8989 126.832)"><stop stop-color="#EF222A"/><stop offset="0.133" stop-color="#EE531F"/><stop offset="0.43" stop-color="#ED391C"/><stop offset="1" stop-color="#ED391C" stop-opacity="0"/></radialGradient></defs></svg>
+                    </figure>
+                    <h2>If you have a website to migrate, you can follow these steps.</h2>
+                    <a href="https://kinsta.com/docs/wordpress-hosting/wordpress-migrations/migrating-to-kinsta/?utm_source=kinsta-empty-site&utm_medium=empty-site" target="_blank" rel="nofollow noopener noreferrer" class="button">Migrate your site</a>
+                </div>
+            </div>
+        </main>
+        <footer class="empty-container__footer">
+            <div class="empty-container__footer-section">Once your site has been migrated, make sure your domains are <a href="https://kinsta.com/docs/wordpress-hosting/wordpress-domains/?utm_source=kinsta-empty-site&utm_medium=empty-site" rel="nofollow noopener noreferrer" target="_blank">configured properly</a>. Then <a href="https://kinsta.com/docs/wordpress-hosting/caching/?utm_source=kinsta-empty-site&utm_medium=empty-site" rel="nofollow noopener noreferrer" target="_blank">clear your site cache</a>, and reload this page to confirm your site loads as you&apos;d expect.</div>
+            <div class="empty-container__footer-section" id="contact-support">
+                <p>If you have any questions, let us know.</p>
+                <a href="https://my.kinsta.com/?utm_source=kinsta-empty-site&utm_medium=empty-site" target="_blank" rel="nofollow noopener noreferrer" class="button button--ghost">Contact support</a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

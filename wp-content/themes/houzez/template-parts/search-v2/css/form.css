@@ -1,0 +1,382 @@
+/* Main Container */
+.search-filter-bar {
+    display: flex;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Filter Items */
+.filter-item {
+    position: relative;
+    min-width: 150px;
+    flex: 1;
+}
+
+/* Search Input */
+.search-input {
+    flex: 2;
+    display: flex;
+    align-items: center;
+    padding: 5px 15px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    transition: border-color 0.3s;
+}
+
+.search-input:hover {
+    border-color: #b0b0b0;
+}
+
+.search-input input {
+    border: none;
+    width: 100%;
+    padding: 5px 8px;
+    margin-left: 8px;
+    font-size: 14px;
+    background: transparent;
+}
+
+.search-input input:focus {
+    outline: none;
+}
+
+/* Icons */
+.houzez-icon {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Dropdown Toggle */
+.dropdown-toggle {
+    padding: 10px 15px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.dropdown-toggle:hover {
+    border-color: #b0b0b0;
+}
+
+.filter-dropdown {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+}
+
+.filter-icon {
+    color: #888;
+    margin-left: 10px;
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+/* Active States */
+.dropdown-container.active .filter-icon {
+    transform: rotate(180deg);
+}
+
+.dropdown-container.active .dropdown-toggle {
+    border-color: var(--e-global-color-primary);
+    background-color: #f0f7ff;
+}
+
+/* Dropdown Content */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 0 0 6px 6px;
+    border-top: none;
+    padding: 15px;
+    z-index: 9999;
+    margin-top: -1px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    max-height: 400px;
+    overflow-y: auto;
+    min-width: 250px;
+}
+
+.dropdown-container.active .dropdown-content {
+    display: block;
+}
+
+/* Location Search */
+.location-results {
+    width: 100%;
+    padding: 5px 0;
+}
+
+.location-group {
+    margin-bottom: 15px;
+}
+
+.location-category {
+    padding: 8px 15px;
+    font-weight: 600;
+    color: #333;
+    background: #f5f5f5;
+    font-size: 14px;
+}
+
+.location-subgroup {
+    padding-left: 10px;
+}
+
+.subgroup-header {
+    padding: 8px 15px 5px;
+    font-size: 13px;
+    color: #666;
+}
+
+.location-option {
+    padding: 10px 15px 10px 25px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.location-option:hover {
+    background-color: #f5f5f5;
+}
+
+.location-option.active {
+    background-color: #e6f2ff;
+}
+
+.location-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: #e9ecef;
+    color: #495057;
+    font-weight: 500;
+}
+
+.p-types {
+    min-width: 350px;
+}
+.p-types .p-types-grid label{ 
+    padding: 2px 6px;
+}
+.p-types-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+/* Price Range */
+.price-range-selector {
+    width: 320px;
+    padding: 15px;
+}
+
+
+.dd-form-header {
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 15px;
+}
+.price-inputs {
+    /* display: flex; */
+    gap: 15px;
+}
+.price-mes {
+    color: red;
+    font-size: 13px;
+    margin-top: 3px;
+    position: relative;
+}
+.price-input {
+    flex: 1;
+}
+
+.price-input label {
+    display: block;
+    margin: 10px 3px;
+    font-size: 13px;
+    color: #666;
+    padding: 0;
+}
+
+.price-input select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+}
+
+.price-input select:focus {
+    outline: none;
+    border-color: var(--e-global-color-primary);
+}
+
+/* Bed/Bath Selectors */
+.option-group {
+    margin-bottom: 15px;
+}
+
+.option-header {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 14px;
+}
+
+.option-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.option-button {
+    padding: 8px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    background: white;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.option-button:hover {
+    border-color: #b0b0b0;
+}
+
+.option-button.active {
+    background: var(--e-global-color-primary);
+    color: white;
+    border-color: var(--e-global-color-primary);
+}
+
+/* Features Grid */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+.features-selector {
+    width: 600px;
+    left: -450px;
+}
+.feature-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.feature-option:hover {
+    background: #f5f5f5;
+}
+
+.feature-option input {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+/* Currency Options */
+.currency-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.currency-option:hover {
+    background: #f5f5f5;
+}
+
+.currency-option.active {
+    background: #e6f2ff;
+    font-weight: 500;
+}
+
+/* Reset Button */
+.reset-button {
+    padding: 10px 20px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #555;
+    transition: all 0.2s;
+    white-space: nowrap;
+    margin-left: auto;
+    font-size: 14px;
+}
+
+.reset-button:hover {
+    background: #e9ecef;
+    border-color: #b0b0b0;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+    .search-filter-bar {
+        gap: 8px;
+    }
+    
+    .filter-item {
+        min-width: 120px;
+    }
+    
+    .price-range-selector {
+        width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-item, .search-input {
+        min-width: 100%;
+    }
+    
+    .price-range-selector, .feature-grid {
+        width: 100%;
+    }
+    
+    .price-inputs {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reset-button {
+        margin-left: 0;
+        width: 100%;
+    }
+}

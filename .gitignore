@@ -1,0 +1,13 @@
+# Log files
+error_log
+error_log_old
+*.log
+
+# Database files
+*.sql
+
+# Large migration files
+kinsta-migration*.sql
+
+# Third-party libraries with secrets
+wp-content/themes/houzez/framework/stripe-php/

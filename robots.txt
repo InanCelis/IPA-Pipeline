@@ -1,0 +1,43 @@
+# START YOAST BLOCK
+# ---------------------------
+Disallow: /tag/
+Disallow: /2025/
+Disallow: /2016/
+Disallow: /author/
+Disallow: /agency/
+Disallow: /category/
+Disallow: /with-content-bottom/
+Disallow: /with-content-top/
+Disallow: /with-featured-on-top/
+Disallow: /with-half-map/
+Disallow: /with-header-map/
+Disallow: /with-list-layout/
+Disallow: /with-parallax/
+Disallow: /with-tabs/
+Disallow: /grid-default/
+Disallow: /grid-full-width-2-cols/
+Disallow: /grid-full-width-4-cols/
+Disallow: /grid-full-width/
+Disallow: /home-image-banner/
+Disallow: /home-overlay-advanced-search/
+Disallow: /home-properties-slider/
+Disallow: /home-revolution-slider/
+Disallow: /home-side-search/
+Disallow: /home-splash/
+Disallow: /home-with-caption-form/
+Disallow: /home-with-map/
+Disallow: /home-with-video/
+Disallow: /inquiry-form/
+Disallow: /list-layout-full-width/
+Disallow: /listings-elementor-sidebar/
+Disallow: /listings-with-elementor/
+Disallow: /about/
+Disallow: /agents-2/
+Disallow: /agent/
+Disallow: /hello-world/
+Disallow: /home-default/
+Disallow: /page/
+
+Sitemap: https://internationalpropertyalerts.com/sitemap_index.xml
+# ---------------------------
+# END YOAST BLOCK
