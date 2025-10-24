@@ -23,6 +23,15 @@ $partnership_list = add_query_arg('hpage', 'partners', $dashboard_partnership);
 $partnership_reports = add_query_arg('hpage', 'reports', $dashboard_partnership);
 $partnership_fields = add_query_arg('hpage', 'fields', $dashboard_partnership);
 
+// Add pipeline submenu links
+$dashboard_pipeline = houzez_get_template_link_2('template/user_dashboard_pipeline.php');
+$pipeline_leads = add_query_arg('hpage', 'leads', $dashboard_pipeline);
+$pipeline_deals = add_query_arg('hpage', 'deals', $dashboard_pipeline);
+$pipeline_invoices = add_query_arg('hpage', 'invoices', $dashboard_pipeline);
+$pipeline_reports = add_query_arg('hpage', 'reports', $dashboard_pipeline);
+$pipeline_fields = add_query_arg('hpage', 'fields', $dashboard_pipeline);
+$pipeline_whitelist = add_query_arg('hpage', 'whitelist', $dashboard_pipeline);
+
 $dashboard_crm = houzez_get_template_link_2('template/user_dashboard_crm.php');
 $crm_leads = add_query_arg( 'hpage', 'leads', $dashboard_crm );
 $crm_deals = add_query_arg( 'hpage', 'deals', $dashboard_crm );
@@ -33,7 +42,7 @@ $home_link = home_url('/');
 $enable_paid_submission = houzez_option('enable_paid_submission');
 
 // $parent_crm = $parent_props = $parent_agents = $ac_crm = $ac_insight = $ac_profile = $ac_props = $ac_add_prop = $ac_fav = $ac_own = $ac_search = $ac_invoices = $ac_msgs = $ac_mem = $ac_gdpr = '';
-$parent_crm = $parent_props = $parent_agents = $parent_partnership = $ac_crm = $ac_insight = $ac_profile = $ac_props = $ac_add_prop = $ac_fav = $ac_own = $ac_search = $ac_invoices = $ac_msgs = $ac_mem = $ac_gdpr = $ac_partnership = '';
+$parent_crm = $parent_props = $parent_agents = $parent_partnership = $parent_pipeline = $ac_crm = $ac_insight = $ac_profile = $ac_props = $ac_add_prop = $ac_fav = $ac_own = $ac_search = $ac_invoices = $ac_msgs = $ac_mem = $ac_gdpr = $ac_partnership = $ac_pipeline = '';
 if( is_page_template( 'template/user_dashboard_profile.php' ) ) {
     $ac_profile = 'class=active';
 } elseif ( is_page_template( 'template/user_dashboard_properties.php' ) ) {
@@ -63,6 +72,9 @@ if( is_page_template( 'template/user_dashboard_profile.php' ) ) {
 }  elseif ( is_page_template( 'template/user_dashboard_partnership.php' ) ) {
     $ac_partnership = 'class=active';
     $parent_partnership = "side-menu-parent-selected";
+} elseif ( is_page_template( 'template/user_dashboard_pipeline.php' ) ) {
+    $ac_pipeline = 'class=active';
+    $parent_pipeline = "side-menu-parent-selected";
 }
 
 $agency_agents = add_query_arg( 'agents', 'list', $dash_profile_link );
@@ -130,6 +142,22 @@ if (current_user_can('administrator')) {
     $partnership_total_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
 } else {
     $partnership_total_count = 0;
+}
+
+// Get pipeline counts for whitelisted users
+if (user_has_pipeline_access()) {
+    global $wpdb;
+    $table_leads = $wpdb->prefix . 'pipeline_leads';
+    $table_deals = $wpdb->prefix . 'pipeline_deals';
+    $table_invoices = $wpdb->prefix . 'pipeline_invoices';
+
+    $pipeline_leads_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_active = 1");
+    $pipeline_deals_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_deals WHERE is_active = 1");
+    $pipeline_invoices_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE is_active = 1");
+} else {
+    $pipeline_leads_count = 0;
+    $pipeline_deals_count = 0;
+    $pipeline_invoices_count = 0;
 }
 ?>
 
@@ -305,6 +333,51 @@ if (current_user_can('administrator')) {
 			$partnership_menu .= '</li>';
 
 			$side_menu .= $partnership_menu;
+			?>
+		<?php } ?>
+
+		<?php if( !empty( $dashboard_pipeline ) && user_has_pipeline_access() ) { ?>
+		<?php
+			$pipeline_menu = '';
+			$pipeline_menu .= '<li class="side-menu-item '.esc_attr($parent_pipeline).'">';
+			$pipeline_menu .= '<a '.$ac_pipeline.' href="'.esc_url($dashboard_pipeline).'">
+				<i class="houzez-icon icon-analytics-bars mr-2"></i> Sales Pipeline
+			</a>';
+			$pipeline_menu .= '<ul class="side-menu-dropdown list-unstyled">';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_leads).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Leads ('.$pipeline_leads_count.')
+				</a>
+			</li>';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_deals).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Deals ('.$pipeline_deals_count.')
+				</a>
+			</li>';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_invoices).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Invoices ('.$pipeline_invoices_count.')
+				</a>
+			</li>';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_reports).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Reports
+				</a>
+			</li>';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_fields).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Field Management
+				</a>
+			</li>';
+			$pipeline_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($pipeline_whitelist).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Whitelisted Users
+				</a>
+			</li>';
+			$pipeline_menu .= '</ul>';
+			$pipeline_menu .= '</li>';
+
+			$side_menu .= $pipeline_menu;
 			?>
 		<?php } ?>
 		<?php

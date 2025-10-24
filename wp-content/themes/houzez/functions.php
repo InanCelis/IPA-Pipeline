@@ -902,7 +902,11 @@ function houzez_enqueue_custom_scripts() {
 }
 
 
-require_once get_template_directory() . '/functions-partnership-install.php'; 
+require_once get_template_directory() . '/functions-partnership-install.php';
+
+// Include Pipeline Database and AJAX Handlers
+require_once get_template_directory() . '/inc/pipeline-database.php';
+require_once get_template_directory() . '/inc/pipeline-ajax-handlers.php'; 
 
 
 // =====================================================

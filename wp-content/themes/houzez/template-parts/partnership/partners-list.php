@@ -32,6 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'contact_person' => sanitize_text_field($_POST['contact_person']),
                     'mobile' => sanitize_text_field($_POST['mobile']),
                     'email' => sanitize_email($_POST['email']),
+                    'registered_office_address' => sanitize_text_field($_POST['registered_office_address']),
+                    'position' => sanitize_text_field($_POST['position']),
                     'updated_at' => current_time('mysql')
                 );
                 
@@ -441,6 +443,16 @@ $countries = $wpdb->get_col("SELECT DISTINCT country FROM {$table_name} WHERE co
                         <label>Email</label>
                         <input type="email" name="email" id="email" class="form-control">
                     </div>
+
+                    <div class="form-group">
+                        <label>Registered Office Address</label>
+                        <input type="text" name="registered_office_address" id="registeredOfficeAddress" class="form-control" placeholder="Enter registered office address">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Position</label>
+                        <input type="text" name="position" id="position" class="form-control" placeholder="e.g., Director, Manager">
+                    </div>
                 </div>
             </div>
             
@@ -521,6 +533,8 @@ function openModal(action, data = null) {
         document.getElementById('contactPerson').value = data.contact_person || '';
         document.getElementById('mobile').value = data.mobile || '';
         document.getElementById('email').value = data.email || '';
+        document.getElementById('registeredOfficeAddress').value = data.registered_office_address || '';
+        document.getElementById('position').value = data.position || '';
     } else {
         modalTitle.textContent = 'Add New Partner';
         formAction.value = 'add';
