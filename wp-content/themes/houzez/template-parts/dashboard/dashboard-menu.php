@@ -20,6 +20,7 @@ $dashboard_partnership = houzez_get_template_link_2('template/user_dashboard_par
 
 // Add partnership submenu links
 $partnership_list = add_query_arg('hpage', 'partners', $dashboard_partnership);
+$partnership_invoices = add_query_arg('hpage', 'invoices', $dashboard_partnership);
 $partnership_reports = add_query_arg('hpage', 'reports', $dashboard_partnership);
 $partnership_fields = add_query_arg('hpage', 'fields', $dashboard_partnership);
 
@@ -317,6 +318,11 @@ if (user_has_pipeline_access()) {
 			$partnership_menu .= '<li class="side-menu-item">
 				<a href="'.esc_url($partnership_list).'">
 					<i class="houzez-icon icon-arrow-right-1"></i> Partners List ('.$partnership_total_count.')
+				</a>
+			</li>';
+			$partnership_menu .= '<li class="side-menu-item">
+				<a href="'.esc_url($partnership_invoices).'">
+					<i class="houzez-icon icon-arrow-right-1"></i> Invoices
 				</a>
 			</li>';
 			$partnership_menu .= '<li class="side-menu-item">

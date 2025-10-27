@@ -29,6 +29,9 @@ $manner_upload_options = get_option('partnership_field_manner_upload', "TBD\nMan
 $property_upload_status_options = get_option('partnership_field_property_upload_status', "None\nOngoing\nCompleted");
 $person_in_charge_options = get_option('partnership_field_person_in_charge', "Aya Piad\nElly Herriman\nPhilip Clarke");
 $country_options = get_option('partnership_field_country', "Philippines\nSpain\nCyprus");
+$invoice_project_options = get_option('partnership_field_invoice_project', "Project A\nProject B\nProject C");
+$invoice_package_tier_options = get_option('partnership_field_invoice_package_tier', "Basic\nStandard\nPremium\nEnterprise");
+$invoice_project_duration_options = get_option('partnership_field_invoice_project_duration', "1 Month\n3 Months\n6 Months\n12 Months");
 
 // Fixed fields with their current options
 $fixed_fields = array(
@@ -73,6 +76,27 @@ $fixed_fields = array(
         'description' => 'Team member responsible for this partnership',
         'options' => $person_in_charge_options,
         'icon' => 'icon-single-neutral'
+    ),
+    array(
+        'name' => 'invoice_project',
+        'label' => 'Invoice Project',
+        'description' => 'Project name for partnership invoices',
+        'options' => $invoice_project_options,
+        'icon' => 'icon-folder-2'
+    ),
+    array(
+        'name' => 'invoice_package_tier',
+        'label' => 'Invoice Package Tier',
+        'description' => 'Service package tier for partnership invoices',
+        'options' => $invoice_package_tier_options,
+        'icon' => 'icon-crown'
+    ),
+    array(
+        'name' => 'invoice_project_duration',
+        'label' => 'Invoice Project Duration',
+        'description' => 'Project duration options for partnership invoices',
+        'options' => $invoice_project_duration_options,
+        'icon' => 'icon-clock-2'
     )
 );
 ?>
@@ -130,7 +154,7 @@ $fixed_fields = array(
 <h3 style="margin: 30px 0 20px 0; color: #333; font-size: 20px; display: flex; align-items: center;">
     <i class="houzez-icon icon-cog-1" style="margin-right: 10px;"></i> Partnership Dropdown Fields
 </h3>
-<p style="color: #666; margin-bottom: 25px;">Manage the options available in dropdown fields throughout the partnership system.</p>
+<p style="color: #666; margin-bottom: 25px;">Manage the options available in dropdown fields throughout the partnership and invoice system.</p>
 
 <!-- Field List -->
 <div style="display: grid; gap: 20px;">

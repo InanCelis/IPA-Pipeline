@@ -60,10 +60,61 @@ function partnership_management_install() {
         KEY idx_user_id (user_id),
         FOREIGN KEY (partnership_id) REFERENCES $table_partnerships(id) ON DELETE CASCADE
     ) $charset_collate;";
-    
+
+    // Table for partnership invoices
+    $table_invoices = $wpdb->prefix . 'partnership_invoices';
+    $sql_invoices = "CREATE TABLE IF NOT EXISTS $table_invoices (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        invoice_type varchar(50) NOT NULL,
+        partnership_id bigint(20) NOT NULL,
+        date_issued date NOT NULL,
+        due_date date NOT NULL,
+        invoice_number varchar(50) NOT NULL UNIQUE,
+        billed_to_name varchar(255) DEFAULT NULL,
+        billed_to_position varchar(255) DEFAULT NULL,
+        billed_to_company varchar(255) DEFAULT NULL,
+        billed_to_address text DEFAULT NULL,
+        service_project varchar(255) DEFAULT NULL,
+        service_package_tier varchar(255) DEFAULT NULL,
+        service_project_duration varchar(255) DEFAULT NULL,
+        service_telemarketers varchar(255) DEFAULT NULL,
+        service_monthly_hours varchar(255) DEFAULT NULL,
+        scope_of_work text DEFAULT NULL,
+        payment_status varchar(50) DEFAULT 'Pending',
+        total_amount decimal(15,2) DEFAULT 0.00,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        is_active tinyint(1) DEFAULT 1,
+        deleted_at datetime DEFAULT NULL,
+        PRIMARY KEY (id),
+        KEY idx_partnership_id (partnership_id),
+        KEY idx_invoice_type (invoice_type),
+        KEY idx_payment_status (payment_status),
+        KEY idx_date_issued (date_issued),
+        KEY idx_due_date (due_date),
+        FOREIGN KEY (partnership_id) REFERENCES $table_partnerships(id) ON DELETE CASCADE
+    ) $charset_collate;";
+
+    // Table for invoice schedule of payment items
+    $table_payment_items = $wpdb->prefix . 'partnership_invoice_payment_items';
+    $sql_payment_items = "CREATE TABLE IF NOT EXISTS $table_payment_items (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        invoice_id bigint(20) NOT NULL,
+        description text DEFAULT NULL,
+        payment_date date DEFAULT NULL,
+        amount_due decimal(15,2) DEFAULT 0.00,
+        sort_order int(11) DEFAULT 0,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_invoice_id (invoice_id),
+        FOREIGN KEY (invoice_id) REFERENCES $table_invoices(id) ON DELETE CASCADE
+    ) $charset_collate;";
+
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql_partnerships);
     dbDelta($sql_comments);
+    dbDelta($sql_invoices);
+    dbDelta($sql_payment_items);
     
     // Insert sample data (optional - remove if not needed)
     partnership_insert_sample_data();
@@ -72,7 +123,7 @@ function partnership_management_install() {
     partnership_create_default_options();
     
     // Set version
-    update_option('partnership_management_db_version', '1.0');
+    update_option('partnership_management_db_version', '1.1');
 }
 
 function partnership_insert_sample_data() {
@@ -155,9 +206,12 @@ function partnership_create_default_options() {
         'partnership_field_industry' => "None\nDeveloper\nReal Estate Agency\nIndividual Owner\nIndividual Broker\nIndividual Agent\nCurrency/Broker",
         'partnership_field_manner_upload' => "TBD\nManual\nXML Feed\nWeb Scrape",
         'partnership_field_property_upload_status' => "None\nOngoing\nCompleted",
-        'partnership_field_person_in_charge' => "Aya Piad\nElly Herriman\nPhilip Clarke"
+        'partnership_field_person_in_charge' => "Aya Piad\nElly Herriman\nPhilip Clarke",
+        'partnership_field_invoice_project' => "Project A\nProject B\nProject C",
+        'partnership_field_invoice_package_tier' => "Basic\nStandard\nPremium\nEnterprise",
+        'partnership_field_invoice_project_duration' => "1 Month\n3 Months\n6 Months\n12 Months"
     );
-    
+
     foreach ($default_options as $key => $value) {
         // Only add if not already exists (don't overwrite existing customizations)
         if (false === get_option($key)) {
@@ -169,11 +223,13 @@ function partnership_create_default_options() {
 // Uninstall function (optional - only use if you want to completely remove everything)
 function partnership_management_uninstall() {
     global $wpdb;
-    
-    // Drop tables
+
+    // Drop tables (order matters due to foreign keys)
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_invoice_payment_items");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_invoices");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_comments");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnerships");
-    
+
     // Delete options
     delete_option('partnership_management_db_version');
     delete_option('partnership_field_agreement_status');
@@ -181,13 +237,16 @@ function partnership_management_uninstall() {
     delete_option('partnership_field_manner_upload');
     delete_option('partnership_field_property_upload_status');
     delete_option('partnership_field_person_in_charge');
+    delete_option('partnership_field_invoice_project');
+    delete_option('partnership_field_invoice_package_tier');
+    delete_option('partnership_field_invoice_project_duration');
 }
 
 // Check and update database if needed
 add_action('admin_init', 'partnership_check_db_version');
 function partnership_check_db_version() {
     $current_version = get_option('partnership_management_db_version', '0');
-    if (version_compare($current_version, '1.0', '<')) {
+    if (version_compare($current_version, '1.1', '<')) {
         partnership_management_install();
     }
 }
