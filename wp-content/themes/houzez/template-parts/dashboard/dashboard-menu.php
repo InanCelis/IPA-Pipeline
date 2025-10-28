@@ -145,16 +145,27 @@ if (current_user_can('administrator')) {
     $partnership_total_count = 0;
 }
 
-// Get pipeline counts for whitelisted users
-if (user_has_pipeline_access()) {
+// Get pipeline counts for whitelisted users and sales_role
+$current_user_obj = wp_get_current_user();
+$is_sales_role = in_array('sales_role', $current_user_obj->roles);
+
+if (user_has_pipeline_access() || $is_sales_role) {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'pipeline_leads';
     $table_deals = $wpdb->prefix . 'pipeline_deals';
     $table_invoices = $wpdb->prefix . 'pipeline_invoices';
 
-    $pipeline_leads_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_active = 1");
-    $pipeline_deals_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_deals WHERE is_active = 1");
-    $pipeline_invoices_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE is_active = 1");
+    // Filter counts for sales_role users (non-admin)
+    if ($is_sales_role && !current_user_can('administrator')) {
+        $assigned_filter = $wpdb->prepare(" AND l.assigned_to = %d", $current_user_obj->ID);
+        $pipeline_leads_count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_leads WHERE is_active = 1 AND assigned_to = %d", $current_user_obj->ID));
+        $pipeline_deals_count = (int) $wpdb->get_var("SELECT COUNT(DISTINCT d.id) FROM $table_deals d LEFT JOIN $table_leads l ON d.lead_id = l.id WHERE d.is_active = 1 $assigned_filter");
+        $pipeline_invoices_count = (int) $wpdb->get_var("SELECT COUNT(DISTINCT i.id) FROM $table_invoices i LEFT JOIN $table_leads l ON i.lead_id = l.id WHERE i.is_active = 1 $assigned_filter");
+    } else {
+        $pipeline_leads_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_active = 1");
+        $pipeline_deals_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_deals WHERE is_active = 1");
+        $pipeline_invoices_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE is_active = 1");
+    }
 } else {
     $pipeline_leads_count = 0;
     $pipeline_deals_count = 0;
@@ -182,13 +193,17 @@ if (user_has_pipeline_access()) {
 
 	} else {
 
-		if( houzez_option('dsh_home_btn', 0) == 1 ) {
+		// Check if user is sales_role (show limited menu)
+		$current_user_check = wp_get_current_user();
+		$is_sales_role_user = in_array('sales_role', $current_user_check->roles) && !current_user_can('administrator');
+
+		if( houzez_option('dsh_home_btn', 0) == 1 && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 				<a href="'.esc_url( home_url( '/' ) ).'"><i class="houzez-icon icon-house mr-2"></i> '.houzez_option('dsh_home', 'Home').'</a>
 			</li>';
 		}
 
-		if( !empty( $dashboard_crm ) && houzez_check_role() ) {
+		if( !empty( $dashboard_crm ) && houzez_check_role() && !$is_sales_role_user ) {
 			$crm_menu = '';
 			$crm_menu .= '<li class="side-menu-item '.esc_attr($parent_crm).'">';
 					$crm_menu .= '<a '.$ac_crm.' href="'.esc_url($dashboard_crm).'">
@@ -217,7 +232,7 @@ if (user_has_pipeline_access()) {
 			$side_menu .= $crm_menu;
 		}
 
-		if( !empty( $dashboard_insight ) && houzez_check_role() ) {
+		if( !empty( $dashboard_insight ) && houzez_check_role() && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.$ac_insight.' href="'.esc_url($dashboard_insight).'">
 						<i class="houzez-icon icon-analytics-bars mr-2"></i> '.houzez_option('dsh_insight', 'Insight').'
@@ -225,7 +240,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 		}
 
-		if( !empty( $dashboard_properties ) && houzez_check_role() ) {
+		if( !empty( $dashboard_properties ) && houzez_check_role() && !$is_sales_role_user ) {
 			$properties_menu = '';
 			$properties_menu .= '<li class="side-menu-item '.esc_attr($parent_props).'">
 					<a '.esc_attr( $ac_props ).' href="'.esc_url($dashboard_properties).'">
@@ -284,7 +299,7 @@ if (user_has_pipeline_access()) {
 				$side_menu .= $properties_menu;
 	    }
 
-		if( !empty( $dashboard_add_listing ) && houzez_check_role() ) {
+		if( !empty( $dashboard_add_listing ) && houzez_check_role() && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr( $ac_add_prop ).' href="'.esc_url($dashboard_add_listing).'">
 						<i class="houzez-icon icon-add-circle mr-2"></i> '.houzez_option('dsh_create_listing', 'Create a Listing').'
@@ -292,7 +307,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 	    }
 
-		if( !empty( $dashboard_favorites ) ) {
+		if( !empty( $dashboard_favorites ) && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr( $ac_fav ).' href="'.esc_url($dashboard_favorites).'">
 						<i class="houzez-icon icon-love-it mr-2"></i> '.houzez_option('dsh_favorite', 'Favorites').'
@@ -300,7 +315,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 	    }
 
-		if( !empty( $dashboard_property_owner ) && current_user_can('administrator') ) {
+		if( !empty( $dashboard_property_owner ) && current_user_can('administrator') && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr( $ac_own ).' href="'.esc_url($dashboard_property_owner).'">
 						<i class="houzez-icon icon-house mr-2"></i> '.houzez_option('dsh_owner', 'Property Owner').'
@@ -342,7 +357,7 @@ if (user_has_pipeline_access()) {
 			?>
 		<?php } ?>
 
-		<?php if( !empty( $dashboard_pipeline ) && user_has_pipeline_access() ) { ?>
+		<?php if( !empty( $dashboard_pipeline ) && (user_has_pipeline_access() || $is_sales_role_user) ) { ?>
 		<?php
 			$pipeline_menu = '';
 			$pipeline_menu .= '<li class="side-menu-item '.esc_attr($parent_pipeline).'">';
@@ -360,26 +375,32 @@ if (user_has_pipeline_access()) {
 					<i class="houzez-icon icon-arrow-right-1"></i> Deals ('.$pipeline_deals_count.')
 				</a>
 			</li>';
-			$pipeline_menu .= '<li class="side-menu-item">
-				<a href="'.esc_url($pipeline_invoices).'">
-					<i class="houzez-icon icon-arrow-right-1"></i> Invoices ('.$pipeline_invoices_count.')
-				</a>
-			</li>';
+			// Only show Invoices menu if not sales_role or if admin
+			if (!$is_sales_role_user) {
+				$pipeline_menu .= '<li class="side-menu-item">
+					<a href="'.esc_url($pipeline_invoices).'">
+						<i class="houzez-icon icon-arrow-right-1"></i> Invoices ('.$pipeline_invoices_count.')
+					</a>
+				</li>';
+			}
 			$pipeline_menu .= '<li class="side-menu-item">
 				<a href="'.esc_url($pipeline_reports).'">
 					<i class="houzez-icon icon-arrow-right-1"></i> Reports
 				</a>
 			</li>';
-			$pipeline_menu .= '<li class="side-menu-item">
-				<a href="'.esc_url($pipeline_fields).'">
-					<i class="houzez-icon icon-arrow-right-1"></i> Field Management
-				</a>
-			</li>';
-			$pipeline_menu .= '<li class="side-menu-item">
-				<a href="'.esc_url($pipeline_whitelist).'">
-					<i class="houzez-icon icon-arrow-right-1"></i> Whitelisted Users
-				</a>
-			</li>';
+			// Hide Field Management and Whitelisted Users from sales_role
+			if (!$is_sales_role_user) {
+				$pipeline_menu .= '<li class="side-menu-item">
+					<a href="'.esc_url($pipeline_fields).'">
+						<i class="houzez-icon icon-arrow-right-1"></i> Field Management
+					</a>
+				</li>';
+				$pipeline_menu .= '<li class="side-menu-item">
+					<a href="'.esc_url($pipeline_whitelist).'">
+						<i class="houzez-icon icon-arrow-right-1"></i> Whitelisted Users
+					</a>
+				</li>';
+			}
 			$pipeline_menu .= '</ul>';
 			$pipeline_menu .= '</li>';
 
@@ -387,7 +408,7 @@ if (user_has_pipeline_access()) {
 			?>
 		<?php } ?>
 		<?php
-		if( !empty( $dashboard_search ) ) {
+		if( !empty( $dashboard_search ) && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr( $ac_search ).' href="'.esc_url($dashboard_search).'">
 						<i class="houzez-icon icon-search mr-2"></i> '.houzez_option('dsh_saved_searches', 'Saved Searches').'
@@ -396,7 +417,7 @@ if (user_has_pipeline_access()) {
 	    }
 
 
-		if( !empty($dashboard_membership) && $enable_paid_submission == 'membership' && houzez_check_role() && ! houzez_is_admin() ) {
+		if( !empty($dashboard_membership) && $enable_paid_submission == 'membership' && houzez_check_role() && ! houzez_is_admin() && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr($ac_mem).' href="'.esc_attr($dashboard_membership).'">
 						<i class="houzez-icon icon-task-list-text-1 mr-2"></i> '.houzez_option('dsh_membership', 'Membership').'
@@ -404,7 +425,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 	    }
 
-		if( !empty( $dashboard_invoices ) && houzez_check_role() ) {
+		if( !empty( $dashboard_invoices ) && houzez_check_role() && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr(  $ac_invoices ).' href="'.esc_url($dashboard_invoices).'">
 						<i class="houzez-icon icon-accounting-document mr-2"></i> '.houzez_option('dsh_invoices', 'Invoices').'
@@ -412,7 +433,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 	    }
 
-	    if( !empty( $dashboard_msgs ) ) {
+	    if( !empty( $dashboard_msgs ) && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr(  $ac_msgs ).' href="'.esc_url($dashboard_msgs).'">
 						<i class="houzez-icon icon-messages-bubble mr-2"></i> '.houzez_option('dsh_messages', 'Messages').'
@@ -420,7 +441,7 @@ if (user_has_pipeline_access()) {
 				</li>';
 	    }
 
-	    if( !empty( $dash_profile_link ) && ( houzez_is_agency() ) ) {
+	    if( !empty( $dash_profile_link ) && ( houzez_is_agency() ) && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item '.esc_attr($parent_agents).'">
 					<a '.esc_attr( $ac_agents ).' href="'.esc_url($agency_agents).'">
 						<i class="houzez-icon icon-single-neutral mr-2"></i> '.houzez_option('dsh_agents', 'Agents').'
@@ -443,7 +464,7 @@ if (user_has_pipeline_access()) {
 				</li>';	
 		}
 
-		if( !empty( $dashboard_gdpr ) ) {
+		if( !empty( $dashboard_gdpr ) && !$is_sales_role_user ) {
 			$side_menu .= '<li class="side-menu-item">
 					<a '.esc_attr( $ac_gdpr ).' href="'.esc_url($dashboard_gdpr).'">
 						<i class="houzez-icon icon-single-neutral-circle mr-2"></i> '.houzez_option('dsh_gdpr', 'GDPR Request').'

@@ -3,6 +3,17 @@
  * Pipeline - Invoices & Documentation
  */
 
+// Check if current user is sales_role (non-admin) and redirect
+$current_user = wp_get_current_user();
+$is_sales_user = in_array('sales_role', $current_user->roles);
+$is_admin = current_user_can('administrator');
+
+if ($is_sales_user && !$is_admin) {
+    // Redirect to leads page
+    wp_redirect(add_query_arg('hpage', 'leads', houzez_get_template_link_2('template/user_dashboard_pipeline.php')));
+    exit;
+}
+
 global $wpdb;
 $table_invoices = $wpdb->prefix . 'pipeline_invoices';
 $table_leads = $wpdb->prefix . 'pipeline_leads';
@@ -211,18 +222,18 @@ $for_payment_deals = $wpdb->get_results("
                     <td><strong>$<?php echo number_format($invoice->referral_fee_amount, 2); ?></strong></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
                     <td>
-                        <div class="action-buttons">
-                            <button class="btn btn-sm btn-success" onclick="previewInvoicePDF(<?php echo $invoice->id; ?>)">
-                                <i class="houzez-icon icon-print-text"></i> Preview
+                        <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: nowrap;">
+                            <button class="btn btn-sm btn-success" onclick="previewInvoicePDF(<?php echo $invoice->id; ?>)" title="Preview">
+                                <i class="houzez-icon icon-print-text"></i>
                             </button>
-                            <button class="btn btn-sm btn-info" onclick='editInvoice(<?php echo json_encode($invoice); ?>)'>
-                                <i class="houzez-icon icon-edit-1"></i> Edit
+                            <button class="btn btn-sm btn-info" onclick='editInvoice(<?php echo json_encode($invoice); ?>)' title="Edit">
+                                <i class="houzez-icon icon-pencil"></i>
                             </button>
-                            <button class="btn btn-sm btn-primary" onclick="downloadInvoicePDF(<?php echo $invoice->id; ?>)">
-                                <i class="houzez-icon icon-download-bottom"></i> Download
+                            <button class="btn btn-sm btn-primary" onclick="downloadInvoicePDF(<?php echo $invoice->id; ?>)" title="Download">
+                                <i class="houzez-icon icon-download-bottom"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteInvoice(<?php echo $invoice->id; ?>)">
-                                <i class="houzez-icon icon-remove-circle"></i> Delete
+                            <button class="btn btn-sm btn-danger" onclick="deleteInvoice(<?php echo $invoice->id; ?>)" title="Delete">
+                                <i class="houzez-icon icon-remove-circle"></i>
                             </button>
                         </div>
                     </td>
@@ -365,15 +376,18 @@ Date of Sale:</textarea>
             <div id="pdfPreviewContent" style="background: white; padding: 40px;"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closePDFPreviewModal()">Close</button>
-            <button class="btn btn-primary" onclick="printInvoice()">
-                <i class="houzez-icon icon-print-text"></i> Print
+            <button type="button" class="btn btn-secondary" onclick="closePDFPreviewModal()">Close</button>
+            <button type="button" class="btn btn-primary" onclick="downloadCurrentInvoice()">
+                <i class="houzez-icon icon-download-bottom"></i> Download PDF
             </button>
         </div>
     </div>
 </div>
 
 <script>
+var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+let currentInvoiceId = null;
+
 function openAddInvoiceModal() {
     document.getElementById('invoiceModalTitle').textContent = 'Create New Invoice';
     document.getElementById('invoiceForm').reset();
@@ -530,6 +544,7 @@ function deleteInvoice(invoiceId) {
 }
 
 function previewInvoicePDF(invoiceId) {
+    currentInvoiceId = invoiceId;
     jQuery.ajax({
         url: '<?php echo admin_url("admin-ajax.php"); ?>',
         type: 'POST',
@@ -556,20 +571,14 @@ function closePDFPreviewModal() {
     document.getElementById('pdfPreviewModal').style.display = 'none';
 }
 
-function printInvoice() {
-    const printContent = document.getElementById('pdfPreviewContent').innerHTML;
-    const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write('<html><head><title>Invoice</title>');
-    printWindow.document.write('<style>body{font-family:Arial,sans-serif;margin:20px;}.invoice-table{width:100%;border-collapse:collapse;}.invoice-table th,.invoice-table td{border:1px solid #ddd;padding:10px;text-align:left;}.text-right{text-align:right;}</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(printContent);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.print();
-}
-
 function downloadInvoicePDF(invoiceId) {
     window.open('<?php echo admin_url("admin-ajax.php"); ?>?action=download_invoice_pdf&invoice_id=' + invoiceId + '&nonce=<?php echo wp_create_nonce("download_invoice_pdf"); ?>', '_blank');
+}
+
+function downloadCurrentInvoice() {
+    if (currentInvoiceId) {
+        downloadInvoicePDF(currentInvoiceId);
+    }
 }
 
 // Close modals when clicking outside

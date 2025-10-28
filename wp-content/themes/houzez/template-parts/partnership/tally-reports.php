@@ -90,13 +90,13 @@ $industry_stats = $wpdb->get_results("
             <th>Person in Charge</th>
             <th>Total Partners</th>
             <th>Signed</th>
-            <th>Preparing</th>
-            <th>Pending Signature</th>
-            <th>Draft Contract Sent</th>
-            <th>Declined</th>
+            <!-- <th>Preparing</th> -->
+            <!-- <th>Pending Signature</th> -->
+            <!-- <th>Draft Contract Sent</th> -->
+            <!-- <th>Declined</th> -->
             <th>Total Properties</th>
-            <th>Completed Uploads</th>
-            <th>Ongoing Uploads</th>
+            <!-- <th>Total Uploaded properties</th> -->
+            <!-- <th>Ongoing Uploads</th> -->
         </tr>
     </thead>
     <tbody>
@@ -116,29 +116,29 @@ $industry_stats = $wpdb->get_results("
                             <?php echo number_format($report->signed_partners); ?>
                         </span>
                     </td>
-                    <td>
+                    <!-- <td>
                         <span class="status-badge status-preparing">
                             <?php echo number_format($report->preparing_partners); ?>
                         </span>
-                    </td>
-                    <td>
+                    </td> -->
+                    <!-- <td>
                         <span class="status-badge status-pending">
                             <?php echo number_format($report->pending_signature); ?>
                         </span>
-                    </td>
-                    <td>
+                    </td> -->
+                    <!-- <td>
                         <span class="status-badge status-draft">
                             <?php echo number_format($report->draft_contract); ?>
                         </span>
-                    </td>
-                    <td>
+                    </td> -->
+                    <!-- <td>
                         <span class="status-badge status-declined">
                             <?php echo number_format($report->declined_partners); ?>
                         </span>
-                    </td>
+                    </td> -->
                     <td><strong><?php echo number_format($report->total_properties); ?></strong></td>
-                    <td><?php echo number_format($report->completed_uploads); ?></td>
-                    <td><?php echo number_format($report->ongoing_uploads); ?></td>
+                    <!-- <td><?php echo number_format($report->completed_uploads); ?></td> -->
+                    <!-- <td><?php echo number_format($report->ongoing_uploads); ?></td> -->
                 </tr>
             <?php endforeach; ?>
             
@@ -147,13 +147,13 @@ $industry_stats = $wpdb->get_results("
                 <td>TOTAL</td>
                 <td><?php echo number_format(array_sum(array_column($reports, 'total_partners'))); ?></td>
                 <td><?php echo number_format(array_sum(array_column($reports, 'signed_partners'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'preparing_partners'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'pending_signature'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'draft_contract'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'declined_partners'))); ?></td>
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'preparing_partners'))); ?></td> -->
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'pending_signature'))); ?></td> -->
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'draft_contract'))); ?></td> -->
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'declined_partners'))); ?></td> -->
                 <td><?php echo number_format(array_sum(array_column($reports, 'total_properties'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'completed_uploads'))); ?></td>
-                <td><?php echo number_format(array_sum(array_column($reports, 'ongoing_uploads'))); ?></td>
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'completed_uploads'))); ?></td> -->
+                <!-- <td><?php echo number_format(array_sum(array_column($reports, 'ongoing_uploads'))); ?></td> -->
             </tr>
         <?php endif; ?>
     </tbody>

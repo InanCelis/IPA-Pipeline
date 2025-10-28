@@ -8,69 +8,94 @@ $table_leads = $wpdb->prefix . 'pipeline_leads';
 $table_deals = $wpdb->prefix . 'pipeline_deals';
 $table_invoices = $wpdb->prefix . 'pipeline_invoices';
 
+// Check if current user is sales_role
+$current_user = wp_get_current_user();
+$is_sales_user = in_array('sales_role', $current_user->roles);
+$is_admin = current_user_can('administrator');
+
 // Date range filter
 $date_from = isset($_GET['date_from']) ? sanitize_text_field($_GET['date_from']) : date('Y-m-01');
 $date_to = isset($_GET['date_to']) ? sanitize_text_field($_GET['date_to']) : date('Y-m-d');
 $report_type = isset($_GET['report_type']) ? sanitize_text_field($_GET['report_type']) : 'sales';
 
+// Add filter for sales users
+$sales_user_filter = "";
+if ($is_sales_user && !$is_admin) {
+    $sales_user_filter = $wpdb->prepare(" AND l.assigned_to = %d", $current_user->ID);
+}
+
 // Sales Report Data
 $sales_data = array(
     'fully_paid' => $wpdb->get_var($wpdb->prepare("
-        SELECT SUM(referral_fee_amount) FROM $table_invoices
-        WHERE payment_status = 'Fully Paid'
-        AND date_issued BETWEEN %s AND %s
-        AND is_active = 1
+        SELECT SUM(i.referral_fee_amount) FROM $table_invoices i
+        LEFT JOIN $table_leads l ON i.lead_id = l.id
+        WHERE i.payment_status = 'Fully Paid'
+        AND i.date_issued BETWEEN %s AND %s
+        AND i.is_active = 1
+        $sales_user_filter
     ", $date_from, $date_to)),
     'partial' => $wpdb->get_var($wpdb->prepare("
-        SELECT SUM(referral_fee_amount) FROM $table_invoices
-        WHERE payment_status = 'Partial'
-        AND date_issued BETWEEN %s AND %s
-        AND is_active = 1
+        SELECT SUM(i.referral_fee_amount) FROM $table_invoices i
+        LEFT JOIN $table_leads l ON i.lead_id = l.id
+        WHERE i.payment_status = 'Partial'
+        AND i.date_issued BETWEEN %s AND %s
+        AND i.is_active = 1
+        $sales_user_filter
     ", $date_from, $date_to)),
     'pending' => $wpdb->get_var($wpdb->prepare("
-        SELECT SUM(referral_fee_amount) FROM $table_invoices
-        WHERE payment_status = 'Pending'
-        AND date_issued BETWEEN %s AND %s
-        AND is_active = 1
+        SELECT SUM(i.referral_fee_amount) FROM $table_invoices i
+        LEFT JOIN $table_leads l ON i.lead_id = l.id
+        WHERE i.payment_status = 'Pending'
+        AND i.date_issued BETWEEN %s AND %s
+        AND i.is_active = 1
+        $sales_user_filter
     ", $date_from, $date_to)),
     'overdue' => $wpdb->get_var($wpdb->prepare("
-        SELECT SUM(referral_fee_amount) FROM $table_invoices
-        WHERE payment_status = 'Overdue'
-        AND date_issued BETWEEN %s AND %s
-        AND is_active = 1
+        SELECT SUM(i.referral_fee_amount) FROM $table_invoices i
+        LEFT JOIN $table_leads l ON i.lead_id = l.id
+        WHERE i.payment_status = 'Overdue'
+        AND i.date_issued BETWEEN %s AND %s
+        AND i.is_active = 1
+        $sales_user_filter
     ", $date_from, $date_to)),
 );
 
-// Leads Report Data
+// Leads Report Data (filtered for sales users)
+$leads_where = "is_active = 1";
+if ($is_sales_user && !$is_admin) {
+    $leads_where .= $wpdb->prepare(" AND assigned_to = %d", $current_user->ID);
+}
+
 $leads_data = array(
     'new_lead' => $wpdb->get_var($wpdb->prepare("
         SELECT COUNT(*) FROM $table_leads
         WHERE status = 'New Lead'
         AND date_inquiry BETWEEN %s AND %s
-        AND is_active = 1
+        AND $leads_where
     ", $date_from, $date_to)),
     'qualifying' => $wpdb->get_var($wpdb->prepare("
         SELECT COUNT(*) FROM $table_leads
         WHERE status = 'Qualifying'
         AND date_inquiry BETWEEN %s AND %s
-        AND is_active = 1
+        AND $leads_where
     ", $date_from, $date_to)),
     'wrong_contact' => $wpdb->get_var($wpdb->prepare("
         SELECT COUNT(*) FROM $table_leads
         WHERE status = 'Wrong Contact'
         AND date_inquiry BETWEEN %s AND %s
-        AND is_active = 1
+        AND $leads_where
     ", $date_from, $date_to)),
     'qualified' => $wpdb->get_var($wpdb->prepare("
         SELECT COUNT(*) FROM $table_leads
         WHERE status = 'Qualified'
         AND date_inquiry BETWEEN %s AND %s
-        AND is_active = 1
+        AND $leads_where
     ", $date_from, $date_to)),
     'cold_lead' => $wpdb->get_var($wpdb->prepare("
         SELECT COUNT(*) FROM $table_leads
         WHERE is_cold_lead = 1
         AND date_inquiry BETWEEN %s AND %s
+        AND $leads_where
     ", $date_from, $date_to)),
 );
 
@@ -120,48 +145,57 @@ $deals_data = array(
     ", $date_from, $date_to)),
 );
 
-// Performance by Person
-$person_in_charge_option = get_option('partnership_field_person_in_charge', '');
-$person_in_charge_list = !empty($person_in_charge_option) ? explode("\n", $person_in_charge_option) : array();
-$person_in_charge_list = array_map('trim', $person_in_charge_list);
-$person_in_charge_list = array_filter($person_in_charge_list);
+// Performance by Sales Users
+$sales_users = get_users(array(
+    'role' => 'sales_role',
+    'orderby' => 'display_name',
+    'order' => 'ASC'
+));
 
 $performance_data = array();
-foreach ($person_in_charge_list as $person) {
+
+// If sales user (non-admin), only show their own data
+if ($is_sales_user && !$is_admin) {
+    $sales_users = array($current_user);
+}
+
+foreach ($sales_users as $user) {
+    $person = $user->display_name;
+    $user_id = $user->ID;
     $performance_data[$person] = array(
         'total_leads' => $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM $table_leads
-            WHERE assigned_to = %s
+            WHERE assigned_to = %d
             AND date_inquiry BETWEEN %s AND %s
             AND is_active = 1
-        ", $person, $date_from, $date_to)),
+        ", $user_id, $date_from, $date_to)),
         'new_leads' => $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM $table_leads
-            WHERE assigned_to = %s AND status = 'New Lead'
+            WHERE assigned_to = %d AND status = 'New Lead'
             AND date_inquiry BETWEEN %s AND %s
             AND is_active = 1
-        ", $person, $date_from, $date_to)),
+        ", $user_id, $date_from, $date_to)),
         'qualified' => $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM $table_leads
-            WHERE assigned_to = %s AND status = 'Qualified'
+            WHERE assigned_to = %d AND status = 'Qualified'
             AND date_inquiry BETWEEN %s AND %s
             AND is_active = 1
-        ", $person, $date_from, $date_to)),
+        ", $user_id, $date_from, $date_to)),
         'invoiced' => $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(DISTINCT i.id) FROM $table_invoices i
             LEFT JOIN $table_leads l ON i.lead_id = l.id
-            WHERE l.assigned_to = %s
+            WHERE l.assigned_to = %d
             AND i.date_issued BETWEEN %s AND %s
             AND i.is_active = 1
-        ", $person, $date_from, $date_to)),
+        ", $user_id, $date_from, $date_to)),
         'total_sales' => $wpdb->get_var($wpdb->prepare("
             SELECT SUM(i.referral_fee_amount) FROM $table_invoices i
             LEFT JOIN $table_leads l ON i.lead_id = l.id
-            WHERE l.assigned_to = %s
+            WHERE l.assigned_to = %d
             AND i.payment_status = 'Fully Paid'
             AND i.date_issued BETWEEN %s AND %s
             AND i.is_active = 1
-        ", $person, $date_from, $date_to)),
+        ", $user_id, $date_from, $date_to)),
     );
 }
 ?>
@@ -302,7 +336,7 @@ foreach ($person_in_charge_list as $person) {
 <?php else : ?>
     <!-- Performance Report -->
     <div class="chart-container">
-        <h3>Performance by Person-in-Charge (<?php echo date('M d, Y', strtotime($date_from)); ?> - <?php echo date('M d, Y', strtotime($date_to)); ?>)</h3>
+        <h3>Performance by Sales User (<?php echo date('M d, Y', strtotime($date_from)); ?> - <?php echo date('M d, Y', strtotime($date_to)); ?>)</h3>
 
         <table class="pipeline-table">
             <thead>

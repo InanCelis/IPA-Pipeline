@@ -7,6 +7,11 @@ global $wpdb;
 $table_leads = $wpdb->prefix . 'pipeline_leads';
 $table_partnerships = $wpdb->prefix . 'partnerships';
 
+// Check if current user is sales_role
+$current_user = wp_get_current_user();
+$is_sales_user = in_array('sales_role', $current_user->roles);
+$is_admin = current_user_can('administrator');
+
 // Get filter parameters
 $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
@@ -20,6 +25,11 @@ $offset = ($page - 1) * $per_page;
 
 // Build query
 $where = array('is_active = 1');
+
+// If sales user, only show their assigned leads
+if ($is_sales_user && !$is_admin) {
+    $where[] = $wpdb->prepare("assigned_to = %d", $current_user->ID);
+}
 
 if (!empty($search)) {
     $where[] = $wpdb->prepare(
@@ -48,29 +58,39 @@ $where_clause = implode(' AND ', $where);
 $total_leads = $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE $where_clause");
 $total_pages = ceil($total_leads / $per_page);
 
-// Get leads
+// Get leads with assigned user info
 $leads = $wpdb->get_results("
-    SELECT * FROM $table_leads
+    SELECT l.*, u.display_name as assigned_to_name
+    FROM $table_leads l
+    LEFT JOIN {$wpdb->users} u ON l.assigned_to = u.ID
     WHERE $where_clause
-    ORDER BY date_inquiry DESC
+    ORDER BY l.date_inquiry DESC
     LIMIT $offset, $per_page
 ");
 
-// Get statistics
+// Get statistics (filtered for sales users)
+$stats_where = "is_active = 1";
+if ($is_sales_user && !$is_admin) {
+    $stats_where .= $wpdb->prepare(" AND assigned_to = %d", $current_user->ID);
+}
+
 $stats = array(
-    'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_active = 1"),
-    'new_lead' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'New Lead' AND is_active = 1"),
-    'qualifying' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Qualifying' AND is_active = 1"),
-    'qualified' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Qualified' AND is_active = 1"),
-    'wrong_contact' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Wrong Contact' AND is_active = 1"),
-    'cold_lead' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_cold_lead = 1")
+    'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE $stats_where"),
+    'new_lead' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'New Lead' AND $stats_where"),
+    'qualifying' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Qualifying' AND $stats_where"),
+    'qualified' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Qualified' AND $stats_where"),
+    'wrong_contact' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE status = 'Wrong Contact' AND $stats_where"),
+    'cold_lead' => $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE is_cold_lead = 1 AND $stats_where")
 );
 
-// Get person in charge options
-$person_in_charge_option = get_option('partnership_field_person_in_charge', '');
-$person_in_charge_list = !empty($person_in_charge_option) ? explode("\n", $person_in_charge_option) : array();
-$person_in_charge_list = array_map('trim', $person_in_charge_list);
-$person_in_charge_list = array_filter($person_in_charge_list);
+// Get Sales users
+$sales_users = get_users(array(
+    'role' => 'sales_role',
+    'orderby' => 'display_name',
+    'order' => 'ASC'
+));
+// Keep users as objects for dropdown with ID as value
+$sales_user_list = $sales_users;
 
 // Get lead sources
 $lead_sources_table = $wpdb->prefix . 'pipeline_field_options';
@@ -83,9 +103,11 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
 
 <div class="pipeline-header">
     <h2 class="pipeline-title">Leads Management</h2>
-    <button class="btn btn-primary" onclick="openAddLeadModal()">
-        <i class="houzez-icon icon-add-circle"></i> Add New Lead
-    </button>
+    <?php if ($is_admin) : ?>
+        <button class="btn btn-primary" onclick="openAddLeadModal()">
+            <i class="houzez-icon icon-add-circle"></i> Add New Lead
+        </button>
+    <?php endif; ?>
 </div>
 
 <!-- Statistics Cards -->
@@ -140,9 +162,9 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                 <label>Assigned To</label>
                 <select name="assigned" class="filter-select">
                     <option value="">All Assignees</option>
-                    <?php foreach ($person_in_charge_list as $person) : ?>
-                        <option value="<?php echo esc_attr($person); ?>" <?php selected($assigned_filter, $person); ?>>
-                            <?php echo esc_html($person); ?>
+                    <?php foreach ($sales_user_list as $sales_user) : ?>
+                        <option value="<?php echo esc_attr($sales_user->ID); ?>" <?php selected($assigned_filter, $sales_user->ID); ?>>
+                            <?php echo esc_html($sales_user->display_name); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -198,7 +220,7 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                     <td><?php echo date('M d, Y', strtotime($lead->date_inquiry)); ?></td>
                     <td><?php echo esc_html($lead->lead_source); ?></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($lead->status); ?></span></td>
-                    <td><?php echo esc_html($lead->assigned_to); ?></td>
+                    <td><?php echo esc_html($lead->assigned_to_name); ?></td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-sm btn-primary" onclick='viewLead(<?php echo json_encode($lead); ?>)'>
@@ -241,6 +263,12 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
             <button class="close" onclick="closeLeadModal()">&times;</button>
         </div>
         <div class="modal-body">
+            <?php if ($is_sales_user && !$is_admin) : ?>
+                <div class="sales-edit-notice">
+                    <i class="houzez-icon icon-information-circle"></i>
+                    <strong>Note:</strong> You can edit contact information and Status. Lead Source, Assigned To, and Partners are restricted.
+                </div>
+            <?php endif; ?>
             <form id="leadForm">
                 <input type="hidden" id="lead_id" name="lead_id">
                 <div class="form-grid">
@@ -264,9 +292,9 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                         <label>Contact Number</label>
                         <input type="text" class="form-control" id="contact_number" name="contact_number">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
                         <label>Lead Source</label>
-                        <select class="form-control" id="lead_source" name="lead_source">
+                        <select class="form-control" id="lead_source" name="lead_source" <?php echo ($is_sales_user && !$is_admin) ? 'disabled' : ''; ?>>
                             <option value="">Select Source</option>
                             <?php foreach ($lead_sources as $source) : ?>
                                 <option value="<?php echo esc_attr($source); ?>"><?php echo esc_html($source); ?></option>
@@ -283,18 +311,18 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                             <option value="Cold Lead">Cold Lead</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
                         <label>Assigned To</label>
-                        <select class="form-control" id="assigned_to" name="assigned_to">
-                            <option value="">Select Person</option>
-                            <?php foreach ($person_in_charge_list as $person) : ?>
-                                <option value="<?php echo esc_attr($person); ?>"><?php echo esc_html($person); ?></option>
+                        <select class="form-control" id="assigned_to" name="assigned_to" <?php echo ($is_sales_user && !$is_admin) ? 'disabled' : ''; ?>>
+                            <option value="">Select Sales Person</option>
+                            <?php foreach ($sales_user_list as $sales_user) : ?>
+                                <option value="<?php echo esc_attr($sales_user->ID); ?>"><?php echo esc_html($sales_user->display_name); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group full-width">
+                    <div class="form-group full-width <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
                         <label>Partners (Multiple Selection)</label>
-                        <select class="form-control select2-partners" id="partners" name="partners[]" multiple>
+                        <select class="form-control select2-partners" id="partners" name="partners[]" multiple <?php echo ($is_sales_user && !$is_admin) ? 'disabled' : ''; ?>>
                             <?php foreach ($partnerships as $partnership) : ?>
                                 <option value="<?php echo $partnership->id; ?>"><?php echo esc_html($partnership->company_name); ?></option>
                             <?php endforeach; ?>
@@ -449,7 +477,7 @@ function viewLead(lead) {
     html += '<div class="form-group"><strong>Date of Inquiry:</strong><p>' + new Date(lead.date_inquiry).toLocaleDateString() + '</p></div>';
     html += '<div class="form-group"><strong>Lead Source:</strong><p>' + (lead.lead_source || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Status:</strong><p><span class="status-badge status-' + lead.status.toLowerCase().replace(/ /g, '-') + '">' + lead.status + '</span></p></div>';
-    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (lead.assigned_to || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (lead.assigned_to_name || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Last Update:</strong><p>' + new Date(lead.last_update).toLocaleString() + '</p></div>';
     html += '</div>';
 
@@ -533,3 +561,27 @@ window.onclick = function(event) {
     }
 }
 </script>
+
+<style>
+.sales-readonly {
+    opacity: 0.7;
+}
+.sales-readonly input[readonly],
+.sales-readonly select[disabled] {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+    border-color: #ddd;
+}
+.sales-edit-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    color: #856404;
+    font-size: 14px;
+}
+.sales-edit-notice i {
+    margin-right: 8px;
+}
+</style>

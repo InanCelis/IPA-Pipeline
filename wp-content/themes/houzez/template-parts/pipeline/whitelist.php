@@ -3,9 +3,14 @@
  * Pipeline - Whitelisted Users
  */
 
-if (!current_user_can('administrator')) {
-    echo '<div class="alert alert-danger">Only administrators can access this page.</div>';
-    return;
+// Check if current user is sales_role (non-admin) and redirect
+$current_user = wp_get_current_user();
+$is_sales_user = in_array('sales_role', $current_user->roles);
+
+if (!current_user_can('administrator') || $is_sales_user) {
+    // Redirect to leads page
+    wp_redirect(add_query_arg('hpage', 'leads', houzez_get_template_link_2('template/user_dashboard_pipeline.php')));
+    exit;
 }
 
 global $wpdb;

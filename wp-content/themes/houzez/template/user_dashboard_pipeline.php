@@ -8,8 +8,12 @@ global $houzez_local, $current_user, $wpdb;
 wp_get_current_user();
 $userID = $current_user->ID;
 
-// Check if user has pipeline access
-if (!user_has_pipeline_access($userID)) {
+// Check if user is sales_role
+$is_sales_user = in_array('sales_role', $current_user->roles);
+$is_admin = current_user_can('administrator');
+
+// Check if user has pipeline access (including sales_role)
+if (!user_has_pipeline_access($userID) && !$is_sales_user) {
     wp_redirect(home_url());
     exit;
 }
@@ -660,7 +664,7 @@ get_header();
     <div class="dashboard-header-wrap">
         <div class="d-flex align-items-center">
             <div class="dashboard-header-left flex-grow-1">
-                <h1>Real Estate Sales Pipeline</h1>
+                <h1>Sales Pipeline</h1>
             </div>
         </div>
     </div>
@@ -680,16 +684,19 @@ get_header();
                         <i class="houzez-icon icon-task-list-text-1 mr-1"></i> Deals
                     </a>
                 </li>
+                <?php if (!$is_sales_user || $is_admin) : ?>
                 <li>
                     <a href="?hpage=invoices" class="<?php echo $hpage == 'invoices' ? 'active' : ''; ?>">
                         <i class="houzez-icon icon-accounting-document mr-1"></i> Invoice & Documentation
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a href="?hpage=reports" class="<?php echo $hpage == 'reports' ? 'active' : ''; ?>">
                         <i class="houzez-icon icon-analytics-bars mr-1"></i> Reports
                     </a>
                 </li>
+                <?php if (!$is_sales_user || $is_admin) : ?>
                 <li>
                     <a href="?hpage=fields" class="<?php echo $hpage == 'fields' ? 'active' : ''; ?>">
                         <i class="houzez-icon icon-cog-1 mr-1"></i> Field Management
@@ -700,6 +707,7 @@ get_header();
                         <i class="houzez-icon icon-lock-5 mr-1"></i> Whitelisted Users
                     </a>
                 </li>
+                <?php endif; ?>
             </ul>
 
             <div class="pipeline-content">

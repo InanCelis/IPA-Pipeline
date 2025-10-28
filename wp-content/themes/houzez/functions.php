@@ -902,11 +902,11 @@ function houzez_enqueue_custom_scripts() {
 }
 
 
-require_once get_template_directory() . '/functions-partnership-install.php';
+require_once get_template_directory() . '/functions-partnership-install.php'; 
 
 // Include Pipeline Database and AJAX Handlers
 require_once get_template_directory() . '/inc/pipeline-database.php';
-require_once get_template_directory() . '/inc/pipeline-ajax-handlers.php';
+require_once get_template_directory() . '/inc/pipeline-ajax-handlers.php'; 
 
 // Include Partnership Invoice AJAX Handlers
 require_once get_template_directory() . '/inc/partnership-invoice-ajax-handlers.php'; 
@@ -1047,3 +1047,47 @@ function search_partnerships_callback() {
     }
 }
 
+// CODE THAT RUNS ONCE (on first activation)
+// add_role(
+//     'sales_role',           // Role slug
+//     'Sales',                // Display name
+//     array(
+//         'read' => true,
+//         'edit_posts' => true,
+//         'publish_posts' => true,
+//         'delete_posts' => true,
+//     )
+// );
+
+// CODE THAT RUNS EVERY TIME (on every page load)
+add_filter( 'user_has_cap', function( $caps, $cap, $args ) {
+    // Check if user has sales_role
+    $user = wp_get_current_user();
+    if ( ! in_array( 'sales_role', $user->roles ) ) {
+        return $caps;
+    }
+
+    // Allowed post IDs for this role
+    $allowed_post_ids = array( 5, 12, 23 ); // Change these to your post IDs
+
+    if ( 'edit_post' === $cap || 'delete_post' === $cap ) {
+        $post_id = isset( $args[2] ) ? $args[2] : null;
+        
+        if ( $post_id && ! in_array( $post_id, $allowed_post_ids ) ) {
+            $caps['edit_posts'] = false;
+        }
+    }
+    
+    return $caps;
+}, 10, 3 );
+
+// CODE THAT RUNS EVERY TIME (on every admin page load)
+add_action( 'admin_init', function() {
+    $user = wp_get_current_user();
+     
+    if ( in_array( 'sales_role', $user->roles ) ) {
+        wp_safe_remote_get( home_url() );
+        wp_redirect( home_url() );
+        exit;
+    }
+});

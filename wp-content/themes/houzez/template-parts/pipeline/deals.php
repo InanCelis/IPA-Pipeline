@@ -8,6 +8,11 @@ $table_deals = $wpdb->prefix . 'pipeline_deals';
 $table_leads = $wpdb->prefix . 'pipeline_leads';
 $table_partnerships = $wpdb->prefix . 'partnerships';
 
+// Check if current user is sales_role
+$current_user = wp_get_current_user();
+$is_sales_user = in_array('sales_role', $current_user->roles);
+$is_admin = current_user_can('administrator');
+
 // Get filter parameters
 $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 $status_filter = isset($_GET['deal_status']) ? sanitize_text_field($_GET['deal_status']) : '';
@@ -21,6 +26,11 @@ $offset = ($page - 1) * $per_page;
 // Build query - Join with leads to get lead info
 // Only show deals where lead status is "Qualified"
 $where = array('d.is_active = 1', 'l.status = "Qualified"');
+
+// If sales user, only show their assigned deals
+if ($is_sales_user && !$is_admin) {
+    $where[] = $wpdb->prepare("l.assigned_to = %d", $current_user->ID);
+}
 
 if (!empty($search)) {
     $where[] = $wpdb->prepare(
@@ -50,60 +60,68 @@ $total_deals = $wpdb->get_var("
 ");
 $total_pages = ceil($total_deals / $per_page);
 
-// Get deals with lead info
+// Get deals with lead info and assigned user name
 $deals = $wpdb->get_results("
-    SELECT d.*, l.fullname, l.email, l.contact_number, l.assigned_to, l.partners
+    SELECT d.*, l.fullname, l.email, l.contact_number, l.assigned_to, l.partners, u.display_name as assigned_to_name
     FROM $table_deals d
     LEFT JOIN $table_leads l ON d.lead_id = l.id
+    LEFT JOIN {$wpdb->users} u ON l.assigned_to = u.ID
     WHERE $where_clause
     ORDER BY d.updated_at DESC
     LIMIT $offset, $per_page
 ");
 
-// Get statistics - Only count deals with Qualified leads
+// Get statistics - Only count deals with Qualified leads (filtered for sales users)
+$stats_where = "d.is_active = 1 AND l.status = 'Qualified'";
+if ($is_sales_user && !$is_admin) {
+    $stats_where .= $wpdb->prepare(" AND l.assigned_to = %d", $current_user->ID);
+}
+
 $stats = array(
     'total' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.is_active = 1 AND l.status = 'Qualified'
+        WHERE $stats_where
     "),
     'na' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'N/A' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'N/A' AND $stats_where
     "),
     'options_sent' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'Options Sent' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'Options Sent' AND $stats_where
     "),
     'site_visit' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'Site Visit' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'Site Visit' AND $stats_where
     "),
     'negotiation' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'Negotiation and Documentation' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'Negotiation and Documentation' AND $stats_where
     "),
     'for_payment' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'For Payment' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'For Payment' AND $stats_where
     "),
     'buyer_payment_completed' => $wpdb->get_var("
         SELECT COUNT(*) FROM $table_deals d
         LEFT JOIN $table_leads l ON d.lead_id = l.id
-        WHERE d.deal_status = 'Buyer Payment Completed' AND d.is_active = 1 AND l.status = 'Qualified'
+        WHERE d.deal_status = 'Buyer Payment Completed' AND $stats_where
     ")
 );
 
-// Get person in charge options
-$person_in_charge_option = get_option('partnership_field_person_in_charge', '');
-$person_in_charge_list = !empty($person_in_charge_option) ? explode("\n", $person_in_charge_option) : array();
-$person_in_charge_list = array_map('trim', $person_in_charge_list);
-$person_in_charge_list = array_filter($person_in_charge_list);
+// Get Sales users
+$sales_users = get_users(array(
+    'role' => 'sales_role',
+    'orderby' => 'display_name',
+    'order' => 'ASC'
+));
+$sales_user_list = $sales_users;
 
 // Get field options
 $field_options_table = $wpdb->prefix . 'pipeline_field_options';
@@ -192,9 +210,9 @@ $cities = get_terms(array('taxonomy' => 'property_city', 'hide_empty' => false))
                 <label>Assigned To</label>
                 <select name="assigned" class="filter-select">
                     <option value="">All Assignees</option>
-                    <?php foreach ($person_in_charge_list as $person) : ?>
-                        <option value="<?php echo esc_attr($person); ?>" <?php selected($assigned_filter, $person); ?>>
-                            <?php echo esc_html($person); ?>
+                    <?php foreach ($sales_user_list as $sales_user) : ?>
+                        <option value="<?php echo esc_attr($sales_user->ID); ?>" <?php selected($assigned_filter, $sales_user->ID); ?>>
+                            <?php echo esc_html($sales_user->display_name); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -241,7 +259,7 @@ $cities = get_terms(array('taxonomy' => 'property_city', 'hide_empty' => false))
                     <td><?php echo esc_html($property_types_display); ?></td>
                     <td><?php echo $deal->budget_amount ? '$' . number_format($deal->budget_amount, 2) : 'N/A'; ?></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($deal->deal_status); ?></span></td>
-                    <td><?php echo esc_html($deal->assigned_to); ?></td>
+                    <td><?php echo esc_html($deal->assigned_to_name); ?></td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-sm btn-primary" onclick='viewDeal(<?php echo json_encode($deal); ?>)'>
@@ -451,7 +469,7 @@ function editDeal(deal) {
     clientHtml += '<div class="form-group"><strong>Name:</strong><p>' + (deal.fullname || 'N/A') + '</p></div>';
     clientHtml += '<div class="form-group"><strong>Email:</strong><p>' + (deal.email || 'N/A') + '</p></div>';
     clientHtml += '<div class="form-group"><strong>Phone:</strong><p>' + (deal.contact_number || 'N/A') + '</p></div>';
-    clientHtml += '<div class="form-group"><strong>Assigned To:</strong><p>' + (deal.assigned_to || 'N/A') + '</p></div>';
+    clientHtml += '<div class="form-group"><strong>Assigned To:</strong><p>' + (deal.assigned_to_name || 'N/A') + '</p></div>';
     clientHtml += '</div>';
     document.getElementById('clientInfo').innerHTML = clientHtml;
 
@@ -574,7 +592,7 @@ function viewDeal(deal) {
     html += '<div class="form-group"><strong>Full Name:</strong><p>' + (deal.fullname || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Email:</strong><p>' + (deal.email || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Phone:</strong><p>' + (deal.contact_number || 'N/A') + '</p></div>';
-    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (deal.assigned_to || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (deal.assigned_to_name || 'N/A') + '</p></div>';
     html += '</div>';
 
     html += '<h4 style="border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin: 30px 0 20px 0;">Buyer Requirements</h4>';
