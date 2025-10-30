@@ -39,10 +39,12 @@ function save_pipeline_lead_handler() {
         'lastname' => sanitize_text_field($_POST['lastname']),
         'email' => sanitize_email($_POST['email']),
         'contact_number' => sanitize_text_field($_POST['contact_number']),
+        'property_url' => isset($_POST['property_url']) ? esc_url_raw($_POST['property_url']) : null,
         'lead_source' => sanitize_text_field($_POST['lead_source']),
         'status' => sanitize_text_field($_POST['status']),
         'assigned_to' => sanitize_text_field($_POST['assigned_to']),
         'partners' => isset($_POST['partners']) ? json_encode($_POST['partners']) : null,
+        'message' => isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : null,
     );
 
     // Handle status changes

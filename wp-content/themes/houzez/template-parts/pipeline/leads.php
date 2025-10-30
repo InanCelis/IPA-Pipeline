@@ -24,7 +24,12 @@ $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
 // Build query
-$where = array('is_active = 1');
+// If filtering by Cold Lead status, include is_active = 0, otherwise only show active leads
+if ($status_filter === 'Cold Lead') {
+    $where = array('(is_active = 1 OR is_active = 0)');
+} else {
+    $where = array('is_active = 1');
+}
 
 // If sales user, only show their assigned leads
 if ($is_sales_user && !$is_admin) {
@@ -266,7 +271,7 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
             <?php if ($is_sales_user && !$is_admin) : ?>
                 <div class="sales-edit-notice">
                     <i class="houzez-icon icon-information-circle"></i>
-                    <strong>Note:</strong> You can edit contact information and Status. Lead Source, Assigned To, and Partners are restricted.
+                    <strong>Note:</strong> You can edit contact information and Status. Lead Source, Assigned To, Partners, and Message are restricted.
                 </div>
             <?php endif; ?>
             <form id="leadForm">
@@ -291,6 +296,10 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                     <div class="form-group">
                         <label>Contact Number</label>
                         <input type="text" class="form-control" id="contact_number" name="contact_number">
+                    </div>
+                    <div class="form-group">
+                        <label>Property URL</label>
+                        <input type="url" class="form-control" id="property_url" name="property_url" placeholder="https://example.com/property">
                     </div>
                     <div class="form-group <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
                         <label>Lead Source</label>
@@ -327,6 +336,10 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                                 <option value="<?php echo $partnership->id; ?>"><?php echo esc_html($partnership->company_name); ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="form-group full-width <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
+                        <label>Message</label>
+                        <textarea class="form-control" id="message" name="message" rows="4" placeholder="Enter any additional message or notes..." <?php echo ($is_sales_user && !$is_admin) ? 'readonly' : ''; ?>></textarea>
                     </div>
                 </div>
             </form>
@@ -378,6 +391,18 @@ jQuery(document).ready(function($) {
 
 let currentViewLeadId = null;
 
+// Partnership mapping for display
+const partnershipMap = {
+    <?php
+    $first = true;
+    foreach ($partnerships as $partnership) {
+        if (!$first) echo ',';
+        echo $partnership->id . ': "' . esc_js($partnership->company_name) . '"';
+        $first = false;
+    }
+    ?>
+};
+
 function openAddLeadModal() {
     document.getElementById('leadModalTitle').textContent = 'Add New Lead';
     document.getElementById('leadForm').reset();
@@ -398,9 +423,11 @@ function editLead(lead) {
     document.getElementById('lastname').value = lead.lastname || '';
     document.getElementById('email').value = lead.email || '';
     document.getElementById('contact_number').value = lead.contact_number || '';
+    document.getElementById('property_url').value = lead.property_url || '';
     document.getElementById('lead_source').value = lead.lead_source || '';
     document.getElementById('status').value = lead.status || 'New Lead';
     document.getElementById('assigned_to').value = lead.assigned_to || '';
+    document.getElementById('message').value = lead.message || '';
 
     // Set partners
     if (lead.partners) {
@@ -479,6 +506,32 @@ function viewLead(lead) {
     html += '<div class="form-group"><strong>Status:</strong><p><span class="status-badge status-' + lead.status.toLowerCase().replace(/ /g, '-') + '">' + lead.status + '</span></p></div>';
     html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (lead.assigned_to_name || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Last Update:</strong><p>' + new Date(lead.last_update).toLocaleString() + '</p></div>';
+
+    // Display Property URL
+    if (lead.property_url) {
+        html += '<div class="form-group full-width"><strong>Property URL:</strong><p><a href="' + lead.property_url + '" target="_blank" rel="noopener noreferrer">' + lead.property_url + '</a></p></div>';
+    }
+
+    // Display Partners
+    if (lead.partners) {
+        try {
+            const partnerIds = JSON.parse(lead.partners);
+            if (partnerIds && partnerIds.length > 0) {
+                const partnerBadges = partnerIds.map(id => {
+                    const name = partnershipMap[id] || 'Unknown';
+                    return '<span class="partner-badge">' + name + '</span>';
+                }).join(' ');
+                html += '<div class="form-group full-width"><strong>Partners:</strong><p>' + partnerBadges + '</p></div>';
+            }
+        } catch (e) {
+            console.error('Error parsing partners:', e);
+        }
+    }
+
+    // Display Message
+    if (lead.message) {
+        html += '<div class="form-group full-width"><strong>Message:</strong><p style="white-space: pre-wrap;">' + (lead.message || 'N/A') + '</p></div>';
+    }
     html += '</div>';
 
     document.getElementById('viewLeadContent').innerHTML = html;
@@ -583,5 +636,16 @@ window.onclick = function(event) {
 }
 .sales-edit-notice i {
     margin-right: 8px;
+}
+.partner-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 2px 4px 2px 0;
+    background: #007bff;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 </style>
