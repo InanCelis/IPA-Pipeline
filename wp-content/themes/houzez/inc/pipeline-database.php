@@ -19,12 +19,14 @@ function create_pipeline_tables() {
         lastname varchar(255) DEFAULT NULL,
         email varchar(255) DEFAULT NULL,
         contact_number varchar(50) DEFAULT NULL,
+        property_url text DEFAULT NULL,
         date_inquiry datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
         lead_source varchar(100) DEFAULT NULL,
         status varchar(50) NOT NULL DEFAULT 'New Lead',
         assigned_to varchar(255) DEFAULT NULL,
         partners text DEFAULT NULL COMMENT 'JSON array of partnership IDs',
-        tags text DEFAULT NULL,
+        tags text DEFAULT NULL COMMENT 'JSON array of tags',
+        message text DEFAULT NULL,
         last_update datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_active tinyint(1) DEFAULT 1 COMMENT 'For soft delete and cold leads',
         is_cold_lead tinyint(1) DEFAULT 0,
@@ -38,6 +40,20 @@ function create_pipeline_tables() {
         KEY date_inquiry (date_inquiry)
     ) $charset_collate;";
     dbDelta($sql_leads);
+
+    // Add missing columns if they don't exist (for existing installations)
+    $columns_to_check = array(
+        'property_url' => "ALTER TABLE $table_leads ADD COLUMN property_url text DEFAULT NULL AFTER contact_number",
+        'tags' => "ALTER TABLE $table_leads ADD COLUMN tags text DEFAULT NULL COMMENT 'JSON array of tags' AFTER partners",
+        'message' => "ALTER TABLE $table_leads ADD COLUMN message text DEFAULT NULL AFTER tags"
+    );
+
+    foreach ($columns_to_check as $column => $sql) {
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_leads LIKE '$column'");
+        if (empty($column_exists)) {
+            $wpdb->query($sql);
+        }
+    }
 
     // 2. DEALS TABLE
     $table_deals = $wpdb->prefix . 'pipeline_deals';

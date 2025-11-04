@@ -12,56 +12,89 @@ $current_user = wp_get_current_user();
 $is_sales_user = in_array('sales_role', $current_user->roles);
 $is_admin = current_user_can('administrator');
 
-// Get filter parameters
-$search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
-$status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-$assigned_filter = isset($_GET['assigned']) ? sanitize_text_field($_GET['assigned']) : '';
-$source_filter = isset($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
+// Get filter parameters - only use if they have actual values
+$search = (isset($_GET['search']) && $_GET['search'] !== '') ? sanitize_text_field($_GET['search']) : '';
+$status_filter = (isset($_GET['status']) && $_GET['status'] !== '') ? sanitize_text_field($_GET['status']) : '';
+$assigned_filter = (isset($_GET['assigned']) && $_GET['assigned'] !== '') ? sanitize_text_field($_GET['assigned']) : '';
+$source_filter = (isset($_GET['source']) && $_GET['source'] !== '') ? sanitize_text_field($_GET['source']) : '';
+$tags_filter = (isset($_GET['tags']) && $_GET['tags'] !== '') ? sanitize_text_field($_GET['tags']) : '';
 
 // Pagination
-$page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+// Check both query string and WordPress paged parameter
+$page = max(1, get_query_var('paged', 1));
+if (isset($_GET['paged'])) {
+    $page = max(1, intval($_GET['paged']));
+}
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
-// Build query
-// If filtering by Cold Lead status, include is_active = 0, otherwise only show active leads
+// Build query with proper escaping
+$where_conditions = array();
+$where_values = array();
+
+// Base condition for active leads
 if ($status_filter === 'Cold Lead') {
-    $where = array('(is_active = 1 OR is_active = 0)');
+    $where_conditions[] = '(l.is_active = 1 OR l.is_active = 0)';
 } else {
-    $where = array('is_active = 1');
+    $where_conditions[] = 'l.is_active = 1';
 }
 
 // If sales user, only show their assigned leads
 if ($is_sales_user && !$is_admin) {
-    $where[] = $wpdb->prepare("assigned_to = %d", $current_user->ID);
+    $where_conditions[] = 'l.assigned_to = %d';
+    $where_values[] = $current_user->ID;
 }
 
+// Search filter
 if (!empty($search)) {
-    $where[] = $wpdb->prepare(
-        "(fullname LIKE %s OR email LIKE %s OR contact_number LIKE %s)",
-        '%' . $wpdb->esc_like($search) . '%',
-        '%' . $wpdb->esc_like($search) . '%',
-        '%' . $wpdb->esc_like($search) . '%'
-    );
+    $search_like = '%' . $wpdb->esc_like($search) . '%';
+    $where_conditions[] = '(l.fullname LIKE %s OR l.email LIKE %s OR l.contact_number LIKE %s)';
+    $where_values[] = $search_like;
+    $where_values[] = $search_like;
+    $where_values[] = $search_like;
 }
 
+// Status filter
 if (!empty($status_filter)) {
-    $where[] = $wpdb->prepare("status = %s", $status_filter);
+    $where_conditions[] = 'l.status = %s';
+    $where_values[] = $status_filter;
 }
 
+// Assigned filter
 if (!empty($assigned_filter)) {
-    $where[] = $wpdb->prepare("assigned_to = %s", $assigned_filter);
+    $where_conditions[] = 'l.assigned_to = %d';
+    $where_values[] = intval($assigned_filter);
 }
 
+// Source filter
 if (!empty($source_filter)) {
-    $where[] = $wpdb->prepare("lead_source = %s", $source_filter);
+    $where_conditions[] = 'l.lead_source = %s';
+    $where_values[] = $source_filter;
 }
 
-$where_clause = implode(' AND ', $where);
+// Tags filter
+if (!empty($tags_filter)) {
+    $where_conditions[] = 'l.tags LIKE %s';
+    $where_values[] = '%' . $wpdb->esc_like('"' . $tags_filter . '"') . '%';
+}
+
+// Build the WHERE clause
+$where_clause = implode(' AND ', $where_conditions);
+
+// If we have values to prepare, use wpdb->prepare, otherwise use as is
+if (!empty($where_values)) {
+    $where_clause = $wpdb->prepare($where_clause, $where_values);
+}
 
 // Get total count
-$total_leads = $wpdb->get_var("SELECT COUNT(*) FROM $table_leads WHERE $where_clause");
+$total_leads = $wpdb->get_var("SELECT COUNT(*) FROM $table_leads l WHERE $where_clause");
 $total_pages = ceil($total_leads / $per_page);
+
+// If current page exceeds total pages and we have results, reset to page 1
+if ($page > $total_pages && $total_pages > 0) {
+    $page = 1;
+    $offset = 0;
+}
 
 // Get leads with assigned user info
 $leads = $wpdb->get_results("
@@ -72,6 +105,12 @@ $leads = $wpdb->get_results("
     ORDER BY l.date_inquiry DESC
     LIMIT $offset, $per_page
 ");
+
+// Debug: Check if tags column exists and has data
+if (current_user_can('administrator') && !empty($leads)) {
+    error_log('First lead tags value: ' . print_r($leads[0]->tags, true));
+    error_log('First lead full object: ' . print_r($leads[0], true));
+}
 
 // Get statistics (filtered for sales users)
 $stats_where = "is_active = 1";
@@ -104,6 +143,33 @@ $lead_sources = $lead_sources_row ? json_decode($lead_sources_row->options, true
 
 // Get signed partnerships
 $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partnerships WHERE agreement_status = 'Signed' ORDER BY company_name");
+
+// Get distinct tags from all leads - handle JSON arrays, comma-separated strings, and plain strings
+$all_tags = array();
+$tags_results = $wpdb->get_results("SELECT DISTINCT tags FROM $table_leads WHERE tags IS NOT NULL AND tags != '' AND tags != 'NULL' AND is_active = 1");
+foreach ($tags_results as $row) {
+    if (!empty($row->tags)) {
+        // Try to decode as JSON array
+        $lead_tags = json_decode($row->tags, true);
+        if (is_array($lead_tags)) {
+            $all_tags = array_merge($all_tags, $lead_tags);
+        } else if (is_string($row->tags)) {
+            // Check if it's comma-separated
+            if (strpos($row->tags, ',') !== false) {
+                // Split by comma and trim
+                $split_tags = array_map('trim', explode(',', $row->tags));
+                $split_tags = array_filter($split_tags); // Remove empty
+                $all_tags = array_merge($all_tags, $split_tags);
+            } else {
+                // Single tag
+                $all_tags[] = trim($row->tags);
+            }
+        }
+    }
+}
+$all_tags = array_unique($all_tags);
+$all_tags = array_values($all_tags); // Re-index array
+sort($all_tags);
 ?>
 
 <div class="pipeline-header">
@@ -186,12 +252,60 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                 </select>
             </div>
             <div class="filter-group">
+                <label>Tags</label>
+                <select name="tags" class="filter-select">
+                    <option value="">All Tags</option>
+                    <?php foreach ($all_tags as $tag) : ?>
+                        <option value="<?php echo esc_attr($tag); ?>" <?php selected($tags_filter, $tag); ?>>
+                            <?php echo esc_html($tag); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
                 <button type="submit" class="btn btn-primary">Filter</button>
                 <a href="?hpage=leads" class="btn btn-secondary">Reset</a>
             </div>
         </div>
     </form>
 </div>
+
+<?php if (!empty($search) || !empty($status_filter) || !empty($assigned_filter) || !empty($source_filter) || !empty($tags_filter)) : ?>
+    <div style="background: #e7f3ff; padding: 10px 15px; margin: 10px 0; border-left: 4px solid #2196F3; border-radius: 4px;">
+        <strong>Active Filters:</strong>
+        <?php if (!empty($search)) : ?>
+            <span style="display: inline-block; margin: 0 5px; padding: 4px 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px;">
+                Search: "<?php echo esc_html($search); ?>"
+            </span>
+        <?php endif; ?>
+        <?php if (!empty($status_filter)) : ?>
+            <span style="display: inline-block; margin: 0 5px; padding: 4px 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px;">
+                Status: <?php echo esc_html($status_filter); ?>
+            </span>
+        <?php endif; ?>
+        <?php if (!empty($assigned_filter)) : ?>
+            <span style="display: inline-block; margin: 0 5px; padding: 4px 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px;">
+                Assigned: <?php
+                    $assigned_user = get_user_by('id', $assigned_filter);
+                    echo $assigned_user ? esc_html($assigned_user->display_name) : 'Unknown';
+                ?>
+            </span>
+        <?php endif; ?>
+        <?php if (!empty($source_filter)) : ?>
+            <span style="display: inline-block; margin: 0 5px; padding: 4px 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px;">
+                Source: <?php echo esc_html($source_filter); ?>
+            </span>
+        <?php endif; ?>
+        <?php if (!empty($tags_filter)) : ?>
+            <span style="display: inline-block; margin: 0 5px; padding: 4px 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px;">
+                Tag: <?php echo esc_html($tags_filter); ?>
+            </span>
+        <?php endif; ?>
+        <span style="margin-left: 10px; color: #666;">
+            Found <?php echo $total_leads; ?> result<?php echo $total_leads != 1 ? 's' : ''; ?>
+        </span>
+    </div>
+<?php endif; ?>
 
 <!-- Leads Table -->
 <table class="pipeline-table">
@@ -203,6 +317,7 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
             <th>Phone</th>
             <th>Date of Inquiry</th>
             <th>Lead Source</th>
+            <th>Tags</th>
             <th>Status</th>
             <th>Assigned To</th>
             <th>Actions</th>
@@ -211,11 +326,37 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
     <tbody>
         <?php if (empty($leads)) : ?>
             <tr>
-                <td colspan="9" class="no-results">No leads found</td>
+                <td colspan="10" class="no-results">No leads found</td>
             </tr>
         <?php else : ?>
             <?php foreach ($leads as $lead) :
                 $status_class = 'status-' . strtolower(str_replace(' ', '-', $lead->status));
+
+                // Debug: Show raw tags value for first few leads (admin only)
+                if (current_user_can('administrator') && $lead->id <= 165) {
+                    // Temporarily show debug info
+                }
+
+                // Safely decode tags - handle NULL, empty string, invalid JSON, comma-separated strings, and plain strings
+                $lead_tags = array();
+                if (isset($lead->tags) && !empty($lead->tags) && $lead->tags !== 'NULL' && $lead->tags !== 'null') {
+                    // Try to decode as JSON first
+                    $decoded = json_decode($lead->tags, true);
+                    if (is_array($decoded) && !empty($decoded)) {
+                        $lead_tags = $decoded;
+                    } else if (is_string($lead->tags) && trim($lead->tags) !== '') {
+                        // Check if it's a comma-separated string
+                        if (strpos($lead->tags, ',') !== false) {
+                            // Split by comma and trim whitespace
+                            $lead_tags = array_map('trim', explode(',', $lead->tags));
+                            // Remove empty values
+                            $lead_tags = array_filter($lead_tags);
+                        } else {
+                            // Single tag (no commas)
+                            $lead_tags = array($lead->tags);
+                        }
+                    }
+                }
             ?>
                 <tr>
                     <td>#<?php echo $lead->id; ?></td>
@@ -224,14 +365,28 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                     <td><?php echo esc_html($lead->contact_number); ?></td>
                     <td><?php echo date('M d, Y', strtotime($lead->date_inquiry)); ?></td>
                     <td><?php echo esc_html($lead->lead_source); ?></td>
+                    <td>
+                        <?php if (!empty($lead_tags)) : ?>
+                            <?php
+                            $tag_count = count($lead_tags);
+                            foreach ($lead_tags as $index => $tag) :
+                            ?>
+                                <span class="tag-badge"><?php echo esc_html($tag); ?></span><?php
+                                if ($index < $tag_count - 1) echo ', ';
+                            ?>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <span style="color: #999;">-</span>
+                        <?php endif; ?>
+                    </td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($lead->status); ?></span></td>
                     <td><?php echo esc_html($lead->assigned_to_name); ?></td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn btn-sm btn-primary" onclick='viewLead(<?php echo json_encode($lead); ?>)'>
+                            <button class="btn btn-sm btn-primary" onclick="viewLead(<?php echo htmlspecialchars(json_encode($lead), ENT_QUOTES, 'UTF-8'); ?>)">
                                 <i class="houzez-icon icon-messages-bubble"></i> View
                             </button>
-                            <button class="btn btn-sm btn-info" onclick='editLead(<?php echo json_encode($lead); ?>)'>
+                            <button class="btn btn-sm btn-info" onclick="editLead(<?php echo htmlspecialchars(json_encode($lead), ENT_QUOTES, 'UTF-8'); ?>)">
                                 <i class="houzez-icon icon-edit-1"></i> Edit
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteLead(<?php echo $lead->id; ?>)">
@@ -246,16 +401,27 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
 </table>
 
 <!-- Pagination -->
-<?php if ($total_pages > 1) : ?>
+<?php if ($total_pages > 1) :
+    // Build filter parameters for pagination
+    $filter_params = '?hpage=leads';
+    if ($search) $filter_params .= '&search=' . urlencode($search);
+    if ($status_filter) $filter_params .= '&status=' . urlencode($status_filter);
+    if ($assigned_filter) $filter_params .= '&assigned=' . urlencode($assigned_filter);
+    if ($source_filter) $filter_params .= '&source=' . urlencode($source_filter);
+    if ($tags_filter) $filter_params .= '&tags=' . urlencode($tags_filter);
+
+    // Get base URL for pagination
+    $base_url = home_url('/sales-pipeline/');
+?>
     <div class="pagination">
-        <button onclick="window.location.href='?hpage=leads&paged=1<?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?>'"
+        <button onclick="window.location.href='<?php echo $base_url . $filter_params; ?>'"
                 <?php echo $page <= 1 ? 'disabled' : ''; ?>>First</button>
-        <button onclick="window.location.href='?hpage=leads&paged=<?php echo max(1, $page - 1); ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?>'"
+        <button onclick="window.location.href='<?php echo $base_url . ($page > 2 ? 'page/' . max(1, $page - 1) . '/' : '') . $filter_params; ?>'"
                 <?php echo $page <= 1 ? 'disabled' : ''; ?>>Previous</button>
         <span class="page-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
-        <button onclick="window.location.href='?hpage=leads&paged=<?php echo min($total_pages, $page + 1); ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?>'"
+        <button onclick="window.location.href='<?php echo $base_url . 'page/' . min($total_pages, $page + 1) . '/' . $filter_params; ?>'"
                 <?php echo $page >= $total_pages ? 'disabled' : ''; ?>>Next</button>
-        <button onclick="window.location.href='?hpage=leads&paged=<?php echo $total_pages; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?>'"
+        <button onclick="window.location.href='<?php echo $base_url . 'page/' . $total_pages . '/' . $filter_params; ?>'"
                 <?php echo $page >= $total_pages ? 'disabled' : ''; ?>>Last</button>
     </div>
 <?php endif; ?>
@@ -337,6 +503,15 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="form-group full-width">
+                        <label>Tags (Multiple Selection)</label>
+                        <select class="form-control select2-tags" id="tags" name="tags[]" multiple data-tags="true">
+                            <?php foreach ($all_tags as $tag) : ?>
+                                <option value="<?php echo esc_attr($tag); ?>"><?php echo esc_html($tag); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Select existing tags or type to create new ones</small>
+                    </div>
                     <div class="form-group full-width <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
                         <label>Message</label>
                         <textarea class="form-control" id="message" name="message" rows="4" placeholder="Enter any additional message or notes..." <?php echo ($is_sales_user && !$is_admin) ? 'readonly' : ''; ?>></textarea>
@@ -386,10 +561,45 @@ jQuery(document).ready(function($) {
             allowClear: true,
             width: '100%'
         });
+
+        $('.select2-tags').select2({
+            placeholder: 'Select existing tags or type new ones',
+            allowClear: true,
+            width: '100%',
+            tags: true,
+            tokenSeparators: [',', ';'],
+            createTag: function (params) {
+                var term = $.trim(params.term);
+                if (term === '') {
+                    return null;
+                }
+                return {
+                    id: term,
+                    text: term,
+                    newTag: true
+                };
+            }
+        });
+
+        // Initial refresh to show all available tags
+        refreshTagsDropdown();
     }
 });
 
 let currentViewLeadId = null;
+
+// Helper function to escape HTML special characters
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
+}
 
 // Partnership mapping for display
 const partnershipMap = {
@@ -403,11 +613,39 @@ const partnershipMap = {
     ?>
 };
 
+// All available tags from PHP
+const allAvailableTags = <?php echo json_encode($all_tags); ?>;
+
+// Function to refresh tags dropdown with current available tags
+function refreshTagsDropdown() {
+    const tagsSelect = jQuery('#tags');
+
+    // Get current selected values
+    const currentValues = tagsSelect.val() || [];
+
+    // Clear existing options
+    tagsSelect.empty();
+
+    // Add all available tags as options
+    allAvailableTags.forEach(function(tag) {
+        const option = new Option(tag, tag, false, false);
+        tagsSelect.append(option);
+    });
+
+    // Re-select previously selected values
+    tagsSelect.val(currentValues);
+
+    // Reinitialize Select2
+    tagsSelect.trigger('change');
+}
+
 function openAddLeadModal() {
     document.getElementById('leadModalTitle').textContent = 'Add New Lead';
     document.getElementById('leadForm').reset();
     document.getElementById('lead_id').value = '';
     jQuery('.select2-partners').val(null).trigger('change');
+    jQuery('.select2-tags').val(null).trigger('change');
+    refreshTagsDropdown(); // Refresh available tags
     document.getElementById('leadModal').style.display = 'block';
 }
 
@@ -439,11 +677,58 @@ function editLead(lead) {
         }
     }
 
+    // Refresh tags dropdown with all available tags
+    refreshTagsDropdown();
+
+    // Set tags - handle JSON array, comma-separated string, and plain string formats
+    if (lead.tags && lead.tags !== 'NULL' && lead.tags !== 'null') {
+        try {
+            let leadTags = [];
+
+            // Try to parse as JSON first
+            try {
+                leadTags = JSON.parse(lead.tags);
+            } catch (e) {
+                // If not JSON, check if it's comma-separated
+                if (lead.tags.includes(',')) {
+                    // Split by comma and trim each tag
+                    leadTags = lead.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                } else {
+                    // Single tag
+                    leadTags = [lead.tags];
+                }
+            }
+
+            if (Array.isArray(leadTags) && leadTags.length > 0) {
+                jQuery('.select2-tags').val(leadTags).trigger('change');
+            }
+        } catch (e) {
+            console.error('Error parsing tags:', e);
+            jQuery('.select2-tags').val(null).trigger('change');
+        }
+    } else {
+        jQuery('.select2-tags').val(null).trigger('change');
+    }
+
     document.getElementById('leadModal').style.display = 'block';
 }
 
 function saveLead() {
-    const formData = new FormData(document.getElementById('leadForm'));
+    const form = document.getElementById('leadForm');
+    const formData = new FormData(form);
+
+    // Manually get tags from Select2 since FormData may not capture it properly
+    const selectedTags = jQuery('#tags').val();
+
+    if (selectedTags && selectedTags.length > 0) {
+        // Remove any existing tags entries
+        formData.delete('tags[]');
+        // Add each tag individually
+        selectedTags.forEach(tag => {
+            formData.append('tags[]', tag);
+        });
+    }
+
     formData.append('action', 'save_pipeline_lead');
     formData.append('nonce', '<?php echo wp_create_nonce("save_pipeline_lead"); ?>');
 
@@ -498,18 +783,18 @@ function viewLead(lead) {
     currentViewLeadId = lead.id;
 
     let html = '<div class="form-grid">';
-    html += '<div class="form-group"><strong>Full Name:</strong><p>' + (lead.fullname || 'N/A') + '</p></div>';
-    html += '<div class="form-group"><strong>Email:</strong><p>' + (lead.email || 'N/A') + '</p></div>';
-    html += '<div class="form-group"><strong>Phone:</strong><p>' + (lead.contact_number || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Full Name:</strong><p>' + escapeHtml(lead.fullname || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Email:</strong><p>' + escapeHtml(lead.email || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Phone:</strong><p>' + escapeHtml(lead.contact_number || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Date of Inquiry:</strong><p>' + new Date(lead.date_inquiry).toLocaleDateString() + '</p></div>';
-    html += '<div class="form-group"><strong>Lead Source:</strong><p>' + (lead.lead_source || 'N/A') + '</p></div>';
-    html += '<div class="form-group"><strong>Status:</strong><p><span class="status-badge status-' + lead.status.toLowerCase().replace(/ /g, '-') + '">' + lead.status + '</span></p></div>';
-    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + (lead.assigned_to_name || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Lead Source:</strong><p>' + escapeHtml(lead.lead_source || 'N/A') + '</p></div>';
+    html += '<div class="form-group"><strong>Status:</strong><p><span class="status-badge status-' + lead.status.toLowerCase().replace(/ /g, '-') + '">' + escapeHtml(lead.status) + '</span></p></div>';
+    html += '<div class="form-group"><strong>Assigned To:</strong><p>' + escapeHtml(lead.assigned_to_name || 'N/A') + '</p></div>';
     html += '<div class="form-group"><strong>Last Update:</strong><p>' + new Date(lead.last_update).toLocaleString() + '</p></div>';
 
     // Display Property URL
     if (lead.property_url) {
-        html += '<div class="form-group full-width"><strong>Property URL:</strong><p><a href="' + lead.property_url + '" target="_blank" rel="noopener noreferrer">' + lead.property_url + '</a></p></div>';
+        html += '<div class="form-group full-width"><strong>Property URL:</strong><p><a href="' + escapeHtml(lead.property_url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(lead.property_url) + '</a></p></div>';
     }
 
     // Display Partners
@@ -519,7 +804,7 @@ function viewLead(lead) {
             if (partnerIds && partnerIds.length > 0) {
                 const partnerBadges = partnerIds.map(id => {
                     const name = partnershipMap[id] || 'Unknown';
-                    return '<span class="partner-badge">' + name + '</span>';
+                    return '<span class="partner-badge">' + escapeHtml(name) + '</span>';
                 }).join(' ');
                 html += '<div class="form-group full-width"><strong>Partners:</strong><p>' + partnerBadges + '</p></div>';
             }
@@ -528,9 +813,39 @@ function viewLead(lead) {
         }
     }
 
+    // Display Tags
+    if (lead.tags && lead.tags !== 'NULL' && lead.tags !== 'null' && lead.tags !== '') {
+        try {
+            let leadTags = [];
+
+            // Try to parse as JSON first
+            try {
+                leadTags = JSON.parse(lead.tags);
+            } catch (e) {
+                // If not JSON, check if comma-separated
+                if (lead.tags.includes(',')) {
+                    leadTags = lead.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                } else {
+                    // Single tag
+                    leadTags = [lead.tags];
+                }
+            }
+
+            if (Array.isArray(leadTags) && leadTags.length > 0) {
+                const tagBadges = leadTags.map((tag, index) => {
+                    let comma = index < leadTags.length - 1 ? ', ' : '';
+                    return '<span class="tag-badge">' + escapeHtml(tag) + '</span>' + comma;
+                }).join('');
+                html += '<div class="form-group full-width"><strong>Tags:</strong><p>' + tagBadges + '</p></div>';
+            }
+        } catch (e) {
+            console.error('Error displaying tags:', e);
+        }
+    }
+
     // Display Message
     if (lead.message) {
-        html += '<div class="form-group full-width"><strong>Message:</strong><p style="white-space: pre-wrap;">' + (lead.message || 'N/A') + '</p></div>';
+        html += '<div class="form-group full-width"><strong>Message:</strong><p style="white-space: pre-wrap;">' + escapeHtml(lead.message || 'N/A') + '</p></div>';
     }
     html += '</div>';
 
@@ -647,5 +962,22 @@ window.onclick = function(event) {
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
+}
+.tag-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 2px 0;
+    background: #28a745;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+/* Small helper text for tags field */
+.form-text.text-muted {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
 }
 </style>

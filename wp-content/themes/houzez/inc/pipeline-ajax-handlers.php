@@ -33,6 +33,11 @@ function save_pipeline_lead_handler() {
         ));
     }
 
+    // Debug: Log tags data for administrators
+    if (current_user_can('administrator')) {
+        error_log('Tags POST data: ' . print_r($_POST['tags'], true));
+    }
+
     $data = array(
         'fullname' => sanitize_text_field($_POST['fullname']),
         'firstname' => sanitize_text_field($_POST['firstname']),
@@ -44,8 +49,14 @@ function save_pipeline_lead_handler() {
         'status' => sanitize_text_field($_POST['status']),
         'assigned_to' => sanitize_text_field($_POST['assigned_to']),
         'partners' => isset($_POST['partners']) ? json_encode($_POST['partners']) : null,
+        'tags' => isset($_POST['tags']) ? json_encode(array_map('sanitize_text_field', $_POST['tags'])) : null,
         'message' => isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : null,
     );
+
+    // Debug: Log final tags value
+    if (current_user_can('administrator')) {
+        error_log('Tags after processing: ' . $data['tags']);
+    }
 
     // Handle status changes
     $new_status = $data['status'];
