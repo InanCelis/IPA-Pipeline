@@ -74,6 +74,7 @@ function partnership_management_install() {
         billed_to_position varchar(255) DEFAULT NULL,
         billed_to_company varchar(255) DEFAULT NULL,
         billed_to_address text DEFAULT NULL,
+        other_details text DEFAULT NULL,
         service_project varchar(255) DEFAULT NULL,
         service_package_tier varchar(255) DEFAULT NULL,
         service_project_duration varchar(255) DEFAULT NULL,
@@ -110,11 +111,27 @@ function partnership_management_install() {
         FOREIGN KEY (invoice_id) REFERENCES $table_invoices(id) ON DELETE CASCADE
     ) $charset_collate;";
 
+    // Table for invoice comments (for both partnership and pipeline invoices)
+    $table_invoice_comments = $wpdb->prefix . 'invoice_comments';
+    $sql_invoice_comments = "CREATE TABLE IF NOT EXISTS $table_invoice_comments (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        invoice_id bigint(20) NOT NULL,
+        invoice_type varchar(20) NOT NULL COMMENT 'partnership or pipeline',
+        user_id bigint(20) NOT NULL,
+        comment text NOT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_invoice_id (invoice_id),
+        KEY idx_invoice_type (invoice_type),
+        KEY idx_user_id (user_id)
+    ) $charset_collate;";
+
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql_partnerships);
     dbDelta($sql_comments);
     dbDelta($sql_invoices);
     dbDelta($sql_payment_items);
+    dbDelta($sql_invoice_comments);
     
     // Insert sample data (optional - remove if not needed)
     partnership_insert_sample_data();
@@ -123,7 +140,7 @@ function partnership_management_install() {
     partnership_create_default_options();
     
     // Set version
-    update_option('partnership_management_db_version', '1.1');
+    update_option('partnership_management_db_version', '1.2');
 }
 
 function partnership_insert_sample_data() {
@@ -225,6 +242,7 @@ function partnership_management_uninstall() {
     global $wpdb;
 
     // Drop tables (order matters due to foreign keys)
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}invoice_comments");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_invoice_payment_items");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_invoices");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}partnership_comments");
@@ -246,7 +264,7 @@ function partnership_management_uninstall() {
 add_action('admin_init', 'partnership_check_db_version');
 function partnership_check_db_version() {
     $current_version = get_option('partnership_management_db_version', '0');
-    if (version_compare($current_version, '1.1', '<')) {
+    if (version_compare($current_version, '1.2', '<')) {
         partnership_management_install();
     }
 }

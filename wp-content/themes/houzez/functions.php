@@ -1000,7 +1000,7 @@ function delete_partnership_comment_ajax_handler() {
     
     // Delete the comment
     $result = $wpdb->delete($comments_table, array('id' => $comment_id));
-    
+
     if ($result) {
         wp_send_json_success(array('message' => 'Comment deleted successfully'));
     } else {
@@ -1008,7 +1008,148 @@ function delete_partnership_comment_ajax_handler() {
     }
 }
 
+// ============================================
+// INVOICE COMMENTS AJAX HANDLERS
+// ============================================
 
+// Get invoice comments
+add_action('wp_ajax_get_invoice_comments', 'get_invoice_comments_ajax_handler');
+function get_invoice_comments_ajax_handler() {
+    global $wpdb;
+
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Please log in to view comments'));
+        return;
+    }
+
+    $invoice_id = isset($_GET['invoice_id']) ? intval($_GET['invoice_id']) : 0;
+    $invoice_type = isset($_GET['invoice_type']) ? sanitize_text_field($_GET['invoice_type']) : 'partnership';
+
+    if (!$invoice_id) {
+        wp_send_json_error(array('message' => 'Invalid invoice ID'));
+        return;
+    }
+
+    $comments_table = $wpdb->prefix . 'invoice_comments';
+
+    // Get all comments for this invoice
+    $comments = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.id, c.comment, c.user_id,
+         u.display_name as user_name,
+         DATE_FORMAT(c.created_at, '%%b %%d, %%Y at %%h:%%i %%p') as created_at
+         FROM {$comments_table} c
+         LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID
+         WHERE c.invoice_id = %d AND c.invoice_type = %s
+         ORDER BY c.created_at DESC",
+        $invoice_id,
+        $invoice_type
+    ));
+
+    // Format the response
+    $formatted_comments = array();
+    foreach ($comments as $comment) {
+        $formatted_comments[] = array(
+            'id' => (int)$comment->id,
+            'comment' => stripslashes($comment->comment),
+            'user_name' => $comment->user_name ?: 'Unknown User',
+            'created_at' => $comment->created_at,
+            'user_id' => (int)$comment->user_id,
+        );
+    }
+
+    wp_send_json_success(array('comments' => $formatted_comments));
+}
+
+// Add invoice comment
+add_action('wp_ajax_add_invoice_comment', 'add_invoice_comment_ajax_handler');
+function add_invoice_comment_ajax_handler() {
+    global $wpdb;
+
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Please log in to add comments'));
+        return;
+    }
+
+    $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+    $invoice_type = isset($_POST['invoice_type']) ? sanitize_text_field($_POST['invoice_type']) : 'partnership';
+    $comment = isset($_POST['comment']) ? sanitize_textarea_field($_POST['comment']) : '';
+
+    if (!$invoice_id || empty($comment)) {
+        wp_send_json_error(array('message' => 'Invalid data provided'));
+        return;
+    }
+
+    $comments_table = $wpdb->prefix . 'invoice_comments';
+
+    // Insert the comment
+    $result = $wpdb->insert(
+        $comments_table,
+        array(
+            'invoice_id' => $invoice_id,
+            'invoice_type' => $invoice_type,
+            'user_id' => get_current_user_id(),
+            'comment' => $comment,
+            'created_at' => current_time('mysql')
+        ),
+        array('%d', '%s', '%d', '%s', '%s')
+    );
+
+    if ($result) {
+        wp_send_json_success(array('message' => 'Comment added successfully'));
+    } else {
+        wp_send_json_error(array('message' => 'Failed to add comment'));
+    }
+}
+
+// Delete invoice comment
+add_action('wp_ajax_delete_invoice_comment', 'delete_invoice_comment_ajax_handler');
+function delete_invoice_comment_ajax_handler() {
+    global $wpdb;
+
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Please log in to delete comments'));
+        return;
+    }
+
+    $comment_id = isset($_POST['comment_id']) ? intval($_POST['comment_id']) : 0;
+
+    if (!$comment_id) {
+        wp_send_json_error(array('message' => 'Invalid comment ID'));
+        return;
+    }
+
+    $current_user_id = get_current_user_id();
+    $comments_table = $wpdb->prefix . 'invoice_comments';
+
+    // Get the comment to check ownership
+    $comment = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$comments_table} WHERE id = %d",
+        $comment_id
+    ));
+
+    if (!$comment) {
+        wp_send_json_error(array('message' => 'Comment not found'));
+        return;
+    }
+
+    // Check if user owns the comment or is admin
+    if ($comment->user_id != $current_user_id && !current_user_can('administrator')) {
+        wp_send_json_error(array('message' => 'You can only delete your own comments'));
+        return;
+    }
+
+    // Delete the comment
+    $result = $wpdb->delete($comments_table, array('id' => $comment_id), array('%d'));
+
+    if ($result) {
+        wp_send_json_success(array('message' => 'Comment deleted successfully'));
+    } else {
+        wp_send_json_error(array('message' => 'Failed to delete comment'));
+    }
+}
 
 // AJAX handler for searching partnerships
 add_action('wp_ajax_search_partnerships', 'search_partnerships_callback');

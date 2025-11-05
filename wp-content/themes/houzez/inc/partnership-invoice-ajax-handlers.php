@@ -41,6 +41,7 @@ function save_partnership_invoice_handler() {
     $billed_to_position = isset($_POST['billed_to_position']) ? sanitize_text_field($_POST['billed_to_position']) : '';
     $billed_to_company = isset($_POST['billed_to_company']) ? sanitize_text_field($_POST['billed_to_company']) : '';
     $billed_to_address = isset($_POST['billed_to_address']) ? sanitize_textarea_field($_POST['billed_to_address']) : '';
+    $other_details = isset($_POST['other_details']) ? sanitize_textarea_field($_POST['other_details']) : '';
 
     // Service Description
     $service_project = isset($_POST['service_project']) ? sanitize_text_field($_POST['service_project']) : '';
@@ -66,6 +67,7 @@ function save_partnership_invoice_handler() {
         'billed_to_position' => $billed_to_position,
         'billed_to_company' => $billed_to_company,
         'billed_to_address' => $billed_to_address,
+        'other_details' => $other_details,
         'service_project' => $service_project,
         'service_package_tier' => $service_package_tier,
         'service_project_duration' => $service_project_duration,
@@ -416,8 +418,17 @@ function generate_partnership_invoice_html($invoice, $payment_items, $for_downlo
             ' . esc_html($invoice->billed_to_position ?: 'N/A') . '<br>
             ' . esc_html($invoice->billed_to_company ?: $invoice->partnership_company) . '<br>
             ' . esc_html($invoice->billed_to_address ?: 'N/A') . '
-        </div>
-    </div>';
+        </div>';
+
+    // Add Other Details if present
+    if (!empty($invoice->other_details)) {
+        $html .= '<div style="margin-top: 10px;">
+            <h4 style="margin-bottom: 4px; color: #666; font-size: 11px;">Other Details:</h4>
+            <div style="line-height: 1.3; font-size: 10px; color: #555;">' . nl2br(esc_html($invoice->other_details)) . '</div>
+        </div>';
+    }
+
+    $html .= '</div>';
 
     // Service Description
     $html .= '<div style="margin-bottom: 25px;">

@@ -97,6 +97,8 @@ function create_pipeline_tables() {
         billed_to_name varchar(255) DEFAULT NULL,
         billed_to_position varchar(255) DEFAULT NULL,
         billed_to_company varchar(255) DEFAULT NULL,
+        billed_to_address text DEFAULT NULL,
+        other_details text DEFAULT NULL,
         transaction_details text DEFAULT NULL,
         description text DEFAULT NULL,
         sale_price decimal(15,2) DEFAULT 0,

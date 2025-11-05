@@ -482,6 +482,7 @@ function save_pipeline_invoice_handler() {
         'billed_to_position' => sanitize_text_field($_POST['billed_to_position']),
         'billed_to_company' => sanitize_text_field($_POST['billed_to_company']),
         'billed_to_address' => sanitize_text_field($_POST['billed_to_address']),
+        'other_details' => isset($_POST['other_details']) ? sanitize_textarea_field($_POST['other_details']) : '',
         'transaction_details' => sanitize_textarea_field($_POST['transaction_details']),
         'description' => sanitize_textarea_field($_POST['description']),
         'sale_price' => $sale_price,
@@ -836,8 +837,17 @@ function generate_invoice_html($invoice, $for_download = false) {
             ' . esc_html($invoice->billed_to_position ?: 'N/A') . '<br>
             ' . esc_html($invoice->billed_to_company ?: $invoice->partnership_company) . '<br>
             ' . esc_html($invoice->billed_to_address ?: 'N/A') . '
-        </div>
-    </div>';
+        </div>';
+
+    // Add Other Details if present
+    if (!empty($invoice->other_details)) {
+        $html .= '<div style="margin-top: 10px;">
+            <h4 style="margin-bottom: 4px; color: #666; font-size: 11px;">Other Details:</h4>
+            <div style="line-height: 1.3; font-size: 10px; color: #555;">' . nl2br(esc_html($invoice->other_details)) . '</div>
+        </div>';
+    }
+
+    $html .= '</div>';
 
     // Transaction Details with line-height 1
     if ($invoice->transaction_details) {

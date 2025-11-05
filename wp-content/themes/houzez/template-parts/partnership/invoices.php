@@ -95,6 +95,20 @@ $package_tier_options = array_filter(explode("\n", get_option('partnership_field
 $project_duration_options = array_filter(explode("\n", get_option('partnership_field_invoice_project_duration', '')));
 ?>
 
+<style>
+.dropdown-menu a:hover {
+    background-color: #f5f5f5 !important;
+}
+.btn-light.dropdown-toggle:hover {
+    background: #e2e6ea !important;
+    border-color: #dae0e5 !important;
+}
+.btn-success:hover {
+    background: #218838 !important;
+    border-color: #1e7e34 !important;
+}
+</style>
+
 <div class="partnership-header">
     <h2 class="partnership-title">Partnership Invoices</h2>
     <button class="btn btn-primary" onclick="openAddInvoiceModal()">
@@ -240,19 +254,61 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
                     <td><strong>$<?php echo number_format($invoice->total_amount, 2); ?></strong></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
                     <td>
-                        <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: nowrap;">
-                            <button class="btn btn-sm btn-success" onclick="previewInvoicePDF(<?php echo $invoice->id; ?>)" title="Preview">
-                                <i class="houzez-icon icon-print-text"></i>
+                        <?php
+                        // Get comment count for this invoice
+                        $comments_table = $wpdb->prefix . 'invoice_comments';
+                        $comment_count = $wpdb->get_var($wpdb->prepare(
+                            "SELECT COUNT(*) FROM {$comments_table} WHERE invoice_id = %d AND invoice_type = 'partnership'",
+                            $invoice->id
+                        ));
+                        ?>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <!-- Comments Button (Green) -->
+                            <button class="btn btn-sm btn-success" onclick="openInvoiceCommentModal(<?php echo $invoice->id; ?>, 'partnership')" title="Comments" style="position: relative; padding: 5px 10px; border: 1px solid #28a745; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">
+                                <i class="houzez-icon icon-messages-bubble"></i>
+                                <?php if ($comment_count > 0): ?>
+                                    <span style="position: absolute;
+                                        margin-top: -45px;
+                                        margin-left: 8px;
+                                        background: #dc3545;
+                                        color: #fff;
+                                        font-size: 10px;
+                                        font-weight: 600;
+                                        border-radius: 50%;
+                                        padding: 3px 6px;
+                                        min-width: 16px;
+                                        height: 16px;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        line-height: 1;
+                                        box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+                                        z-index: 99;">
+                                        <?php echo intval($comment_count); ?>
+                                    </span>
+                                <?php endif; ?>
                             </button>
-                            <button class="btn btn-sm btn-info" onclick='editInvoice(<?php echo $invoice->id; ?>)' title="Edit">
-                                <i class="houzez-icon icon-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="downloadInvoicePDF(<?php echo $invoice->id; ?>)" title="Download">
-                                <i class="houzez-icon icon-download-bottom"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteInvoice(<?php echo $invoice->id; ?>)" title="Delete">
-                                <i class="houzez-icon icon-remove-circle"></i>
-                            </button>
+
+                            <!-- Actions Dropdown (Light Gray) -->
+                            <div class="dropdown" style="position: relative; display: inline-block;">
+                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="actionsDropdown<?php echo $invoice->id; ?>" onclick="toggleInvoiceDropdown(<?php echo $invoice->id; ?>)" style="padding: 5px 15px; border: 1px solid #ddd; background: #f8f9fa; color: #333; border-radius: 4px; cursor: pointer;">
+                                    Actions
+                                </button>
+                                <div id="dropdownMenu<?php echo $invoice->id; ?>" class="dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); min-width: 160px; z-index: 1000; margin-top: 2px;">
+                                    <a href="javascript:void(0)" onclick="editInvoice(<?php echo $invoice->id; ?>); toggleInvoiceDropdown(<?php echo $invoice->id; ?>)" style="display: block; padding: 8px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                                        <i class="houzez-icon icon-pencil"></i> Edit
+                                    </a>
+                                    <a href="javascript:void(0)" onclick="previewInvoicePDF(<?php echo $invoice->id; ?>); toggleInvoiceDropdown(<?php echo $invoice->id; ?>)" style="display: block; padding: 8px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                                        <i class="houzez-icon icon-print-text"></i> Preview
+                                    </a>
+                                    <a href="javascript:void(0)" onclick="downloadInvoicePDF(<?php echo $invoice->id; ?>); toggleInvoiceDropdown(<?php echo $invoice->id; ?>)" style="display: block; padding: 8px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                                        <i class="houzez-icon icon-download-bottom"></i> Download
+                                    </a>
+                                    <a href="javascript:void(0)" onclick="deleteInvoice(<?php echo $invoice->id; ?>); toggleInvoiceDropdown(<?php echo $invoice->id; ?>)" style="display: block; padding: 8px 15px; color: #dc3545; text-decoration: none;">
+                                        <i class="houzez-icon icon-remove-circle"></i> Delete
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -351,6 +407,10 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
                         <label>Address</label>
                         <input type="text" class="form-control" id="billed_to_address" name="billed_to_address">
                     </div>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Other Details</label>
+                    <textarea class="form-control" id="other_details" name="other_details" rows="3" placeholder="Enter any additional details..."></textarea>
                 </div>
 
                 <!-- Service Description -->
@@ -465,6 +525,52 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
                 <i class="houzez-icon icon-download-bottom"></i> Download PDF
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Invoice Comments Modal -->
+<div id="invoiceCommentModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="houzez-icon icon-messages-bubble"></i> Invoice Comments
+            </h3>
+            <button class="close" onclick="closeInvoiceCommentModal()">&times;</button>
+        </div>
+        <form id="invoiceCommentForm">
+            <input type="hidden" name="invoice_id" id="commentInvoiceId">
+            <input type="hidden" name="invoice_type" id="commentInvoiceType">
+
+            <div class="modal-body">
+                <!-- Comments Container -->
+                <div id="invoiceCommentsContainer" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="houzez-icon icon-spinner-1 rotate-icon"></i> Loading comments...
+                    </div>
+                </div>
+
+                <!-- Add Comment Form -->
+                <div style="padding: 0;">
+                    <label for="commentText" style="display: block; margin-bottom: 8px; font-weight: 600;">Add a comment:</label>
+                    <textarea
+                        name="comment"
+                        id="commentText"
+                        class="form-control"
+                        rows="3"
+                        required
+                        placeholder="Type your comment here..."
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: space-between; padding: 15px 20px; border-top: 1px solid #ddd;">
+                <button type="button" class="btn btn-secondary" onclick="closeInvoiceCommentModal()">Close</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="houzez-icon icon-messages-bubble"></i> Send Comment
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -618,6 +724,7 @@ function editInvoice(invoiceId) {
                 document.getElementById('billed_to_position').value = invoice.billed_to_position || '';
                 document.getElementById('billed_to_company').value = invoice.billed_to_company || '';
                 document.getElementById('billed_to_address').value = invoice.billed_to_address || '';
+                document.getElementById('other_details').value = invoice.other_details || '';
                 document.getElementById('service_project').value = invoice.service_project || '';
                 document.getElementById('service_package_tier').value = invoice.service_package_tier || '';
                 document.getElementById('service_project_duration').value = invoice.service_project_duration || '';
@@ -719,11 +826,178 @@ function downloadCurrentInvoice() {
 window.onclick = function(event) {
     const invoiceModal = document.getElementById('invoiceModal');
     const pdfModal = document.getElementById('pdfPreviewModal');
+    const commentModal = document.getElementById('invoiceCommentModal');
     if (event.target === invoiceModal) {
         closeInvoiceModal();
     }
     if (event.target === pdfModal) {
         closePdfPreviewModal();
     }
+    if (event.target === commentModal) {
+        closeInvoiceCommentModal();
+    }
+}
+
+// ============================================
+// INVOICE COMMENTS FUNCTIONALITY
+// ============================================
+
+let currentCommentInvoiceId = null;
+let currentCommentInvoiceType = null;
+
+function openInvoiceCommentModal(invoiceId, invoiceType) {
+    currentCommentInvoiceId = invoiceId;
+    currentCommentInvoiceType = invoiceType;
+    document.getElementById('commentInvoiceId').value = invoiceId;
+    document.getElementById('commentInvoiceType').value = invoiceType;
+    loadInvoiceComments(invoiceId, invoiceType);
+    document.getElementById('invoiceCommentModal').style.display = 'block';
+}
+
+function closeInvoiceCommentModal() {
+    document.getElementById('invoiceCommentModal').style.display = 'none';
+    document.getElementById('invoiceCommentForm').reset();
+    currentCommentInvoiceId = null;
+    currentCommentInvoiceType = null;
+}
+
+function loadInvoiceComments(invoiceId, invoiceType) {
+    const container = document.getElementById('invoiceCommentsContainer');
+    const currentUserId = <?php echo get_current_user_id(); ?>;
+
+    container.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="houzez-icon icon-spinner-1 rotate-icon"></i> Loading comments...</div>';
+
+    jQuery.ajax({
+        url: ajaxurl + '?action=get_invoice_comments&invoice_id=' + invoiceId + '&invoice_type=' + invoiceType,
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const comments = response.data.comments;
+
+                if (comments.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">No comments yet. Be the first to comment!</div>';
+                    return;
+                }
+
+                // Reverse to show oldest first
+                const reversedComments = comments.reverse();
+                let html = '';
+
+                reversedComments.forEach(comment => {
+                    const isCurrentUser = String(comment.user_id).trim() === String(currentUserId).trim();
+
+                    html += `
+                        <div style="display: flex; justify-content: ${isCurrentUser ? 'flex-end' : 'flex-start'}; margin-bottom: 15px;">
+                            <div style="max-width: 70%; background: ${isCurrentUser ? '#0084ff' : '#e4e6eb'}; color: ${isCurrentUser ? '#fff' : '#000'}; padding: 10px 15px; border-radius: 18px; position: relative;">
+                                ${!isCurrentUser ? `<div style="font-weight: bold; margin-bottom: 5px; font-size: 12px;">${comment.user_name}</div>` : ''}
+                                <div style="word-wrap: break-word; white-space: pre-wrap;">${comment.comment}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; gap: 10px;">
+                                    <small style="opacity: 0.8; font-size: 11px;">${comment.created_at}</small>
+                                    ${isCurrentUser ? `
+                                        <button onclick="deleteInvoiceComment(${comment.id}, ${invoiceId}, '${invoiceType}')"
+                                                style="background: none; border: none; color: ${isCurrentUser ? '#fff' : '#dc3545'}; cursor: pointer; padding: 2px 5px; font-size: 11px; opacity: 0.8;"
+                                                title="Delete comment">
+                                            <i class="houzez-icon icon-remove-circle"></i> Delete
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            } else {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Error loading comments</div>';
+            }
+        },
+        error: function() {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Error loading comments</div>';
+        }
+    });
+}
+
+function deleteInvoiceComment(commentId, invoiceId, invoiceType) {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+        return;
+    }
+
+    jQuery.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        data: {
+            action: 'delete_invoice_comment',
+            comment_id: commentId
+        },
+        success: function(response) {
+            if (response.success) {
+                loadInvoiceComments(invoiceId, invoiceType);
+            } else {
+                alert('Error: ' + (response.data.message || 'Failed to delete comment'));
+            }
+        },
+        error: function() {
+            alert('An error occurred while deleting the comment');
+        }
+    });
+}
+
+// Handle comment form submission
+jQuery(document).ready(function($) {
+    $('#invoiceCommentForm').on('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        formData.append('action', 'add_invoice_comment');
+
+        const submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true).text('Sending...');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: Object.fromEntries(formData),
+            success: function(response) {
+                if (response.success) {
+                    $('#invoiceCommentForm textarea[name="comment"]').val('');
+                    loadInvoiceComments(currentCommentInvoiceId, currentCommentInvoiceType);
+
+                    // Update comment count badge in table
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.data.message || 'Failed to add comment'));
+                }
+            },
+            error: function() {
+                alert('An error occurred while adding the comment');
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).text('Send Comment');
+            }
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.dropdown').length) {
+            $('.dropdown-menu').hide();
+        }
+    });
+});
+
+// Toggle dropdown menu
+function toggleInvoiceDropdown(invoiceId) {
+    const dropdown = document.getElementById('dropdownMenu' + invoiceId);
+    const isVisible = dropdown.style.display === 'block';
+
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.style.display = 'none';
+    });
+
+    // Toggle current dropdown
+    dropdown.style.display = isVisible ? 'none' : 'block';
 }
 </script>

@@ -228,115 +228,15 @@ get_header();
     .status-upload-completed {
         background: #e7ffec;
     }
-
-    /* Invoice Status Badges */
-    .status-sent {
-        background: #cfe2ff;
-        color: #084298;
-    }
-
-    .status-partial {
-        background: #fff3cd;
-        color: #997404;
-    }
-
-    .status-fully-paid {
-        background: #d1e7dd;
-        color: #0a3622;
-    }
-
-    .status-overdue {
-        background: #f8d7da;
-        color: #842029;
-    }
-
+    
     .action-buttons {
         display: flex;
         gap: 8px;
-        flex-wrap: nowrap;
     }
-
+    
     .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-        white-space: nowrap;
-    }
-
-    /* Invoice Table Styles */
-    .pipeline-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        background: white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .pipeline-table thead {
-        background: #f8f9fa;
-    }
-
-    .pipeline-table th {
-        padding: 12px 15px;
-        text-align: left;
-        font-weight: 600;
-        color: #333;
-        border-bottom: 2px solid #dee2e6;
-        white-space: nowrap;
-    }
-
-    .pipeline-table td {
-        padding: 12px 15px;
-        border-bottom: 1px solid #f0f0f0;
-        vertical-align: middle;
-    }
-
-    .pipeline-table tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-
-    .pipeline-table .no-results {
-        text-align: center;
-        padding: 40px 20px;
-        color: #999;
-        font-style: italic;
-    }
-
-    /* Pagination */
-    .pagination {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        justify-content: center;
-        margin-top: 20px;
-        padding: 20px 0;
-    }
-
-    .pagination button {
-        padding: 8px 16px;
-        border: 1px solid #dee2e6;
-        background: white;
-        color: #333;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.3s;
-    }
-
-    .pagination button:hover:not(:disabled) {
-        background: var(--e-global-color-primary);
-        color: white;
-        border-color: var(--e-global-color-primary);
-    }
-
-    .pagination button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .pagination .page-info {
-        padding: 0 15px;
-        font-weight: 500;
-        color: #333;
+        padding: 0px 10px;
+        font-size: 10px;
     }
 
     .modal {
@@ -446,7 +346,7 @@ get_header();
     
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
         gap: 20px;
         margin-bottom: 30px;
     }
