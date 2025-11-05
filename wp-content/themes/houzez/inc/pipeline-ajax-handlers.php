@@ -5,18 +5,55 @@
  */
 
 // ========================================
+// DIAGNOSTIC TEST HANDLER
+// ========================================
+
+// Test Sales Access - Diagnostic endpoint to verify user authentication
+add_action('wp_ajax_test_sales_access', 'test_sales_access_handler');
+function test_sales_access_handler() {
+    error_log('TEST: Handler reached for user ID = ' . get_current_user_id());
+
+    $current_user = wp_get_current_user();
+    $user_data = array(
+        'user_id' => get_current_user_id(),
+        'username' => $current_user->user_login,
+        'roles' => $current_user->roles,
+        'capabilities' => array_keys($current_user->allcaps),
+        'has_pipeline_access' => user_has_pipeline_access(),
+        'is_logged_in' => is_user_logged_in()
+    );
+
+    error_log('TEST: User data = ' . print_r($user_data, true));
+
+    wp_send_json_success($user_data);
+}
+
+// ========================================
 // LEADS AJAX HANDLERS
 // ========================================
 
 // Save Pipeline Lead
 add_action('wp_ajax_save_pipeline_lead', 'save_pipeline_lead_handler');
 function save_pipeline_lead_handler() {
-    check_ajax_referer('save_pipeline_lead', 'nonce');
+    // Log for debugging
+    error_log('Save lead handler called by user: ' . get_current_user_id());
 
-    if (!user_has_pipeline_access()) {
-        wp_send_json_error('Access denied');
+    // Verify nonce
+    if (!check_ajax_referer('save_pipeline_lead', 'nonce', false)) {
+        error_log('Nonce check failed');
+        wp_send_json_error('Security check failed. Please refresh the page and try again.');
         return;
     }
+
+    error_log('Nonce check passed');
+
+    if (!user_has_pipeline_access()) {
+        error_log('Access denied for user: ' . get_current_user_id());
+        wp_send_json_error('Access denied. You do not have permission to access this feature.');
+        return;
+    }
+
+    error_log('Access check passed');
 
     global $wpdb;
     $table_leads = $wpdb->prefix . 'pipeline_leads';
@@ -33,29 +70,37 @@ function save_pipeline_lead_handler() {
         ));
     }
 
-    // Debug: Log tags data for administrators
-    if (current_user_can('administrator')) {
-        error_log('Tags POST data: ' . print_r($_POST['tags'], true));
-    }
+    // Check if user is Sales role - restrict editable fields
+    $current_user = wp_get_current_user();
+    $is_sales_role = in_array('sales_role', $current_user->roles);
 
-    $data = array(
-        'fullname' => sanitize_text_field($_POST['fullname']),
-        'firstname' => sanitize_text_field($_POST['firstname']),
-        'lastname' => sanitize_text_field($_POST['lastname']),
-        'email' => sanitize_email($_POST['email']),
-        'contact_number' => sanitize_text_field($_POST['contact_number']),
-        'property_url' => isset($_POST['property_url']) ? esc_url_raw($_POST['property_url']) : null,
-        'lead_source' => sanitize_text_field($_POST['lead_source']),
-        'status' => sanitize_text_field($_POST['status']),
-        'assigned_to' => sanitize_text_field($_POST['assigned_to']),
-        'partners' => isset($_POST['partners']) ? json_encode($_POST['partners']) : null,
-        'tags' => isset($_POST['tags']) ? json_encode(array_map('sanitize_text_field', $_POST['tags'])) : null,
-        'message' => isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : null,
-    );
-
-    // Debug: Log final tags value
-    if (current_user_can('administrator')) {
-        error_log('Tags after processing: ' . $data['tags']);
+    if ($is_sales_role && $lead_id > 0) {
+        // Sales role can only edit: contact info (name, email, phone) and status
+        // For updates, only include editable fields
+        $data = array(
+            'fullname' => sanitize_text_field($_POST['fullname']),
+            'firstname' => sanitize_text_field($_POST['firstname']),
+            'lastname' => sanitize_text_field($_POST['lastname']),
+            'email' => sanitize_email($_POST['email']),
+            'contact_number' => sanitize_text_field($_POST['contact_number']),
+            'status' => sanitize_text_field($_POST['status']),
+        );
+    } else {
+        // Admins and other roles can edit all fields
+        $data = array(
+            'fullname' => sanitize_text_field($_POST['fullname']),
+            'firstname' => sanitize_text_field($_POST['firstname']),
+            'lastname' => sanitize_text_field($_POST['lastname']),
+            'email' => sanitize_email($_POST['email']),
+            'contact_number' => sanitize_text_field($_POST['contact_number']),
+            'property_url' => isset($_POST['property_url']) ? esc_url_raw($_POST['property_url']) : null,
+            'lead_source' => sanitize_text_field($_POST['lead_source']),
+            'status' => sanitize_text_field($_POST['status']),
+            'assigned_to' => sanitize_text_field($_POST['assigned_to']),
+            'partners' => isset($_POST['partners']) ? json_encode($_POST['partners']) : null,
+            'tags' => isset($_POST['tags']) ? json_encode(array_map('sanitize_text_field', $_POST['tags'])) : null,
+            'message' => isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : null,
+        );
     }
 
     // Handle status changes
@@ -83,7 +128,11 @@ function save_pipeline_lead_handler() {
         $result = $wpdb->update($table_leads, $data, array('id' => $lead_id));
 
         if ($result === false) {
-            wp_send_json_error('Failed to update lead');
+            $error_msg = 'Failed to update lead';
+            if ($wpdb->last_error) {
+                $error_msg .= ': ' . $wpdb->last_error;
+            }
+            wp_send_json_error($error_msg);
             return;
         }
 
@@ -136,10 +185,14 @@ function save_pipeline_lead_handler() {
 // Delete Pipeline Lead
 add_action('wp_ajax_delete_pipeline_lead', 'delete_pipeline_lead_handler');
 function delete_pipeline_lead_handler() {
-    check_ajax_referer('delete_pipeline_lead', 'nonce');
+    // Verify nonce
+    if (!check_ajax_referer('delete_pipeline_lead', 'nonce', false)) {
+        wp_send_json_error('Security check failed. Please refresh the page and try again.');
+        return;
+    }
 
     if (!user_has_pipeline_access()) {
-        wp_send_json_error('Access denied');
+        wp_send_json_error('Access denied. You do not have permission to access this feature.');
         return;
     }
 
@@ -172,12 +225,25 @@ function delete_pipeline_lead_handler() {
 // Save Pipeline Deal
 add_action('wp_ajax_save_pipeline_deal', 'save_pipeline_deal_handler');
 function save_pipeline_deal_handler() {
-    check_ajax_referer('save_pipeline_deal', 'nonce');
+    // Log for debugging
+    error_log('Save deal handler called by user: ' . get_current_user_id());
 
-    if (!user_has_pipeline_access()) {
-        wp_send_json_error('Access denied');
+    // Verify nonce
+    if (!check_ajax_referer('save_pipeline_deal', 'nonce', false)) {
+        error_log('Nonce check failed for deal');
+        wp_send_json_error('Security check failed. Please refresh the page and try again.');
         return;
     }
+
+    error_log('Deal nonce check passed');
+
+    if (!user_has_pipeline_access()) {
+        error_log('Access denied for deal user: ' . get_current_user_id());
+        wp_send_json_error('Access denied. You do not have permission to access this feature.');
+        return;
+    }
+
+    error_log('Deal access check passed');
 
     global $wpdb;
     $table_deals = $wpdb->prefix . 'pipeline_deals';
@@ -195,6 +261,7 @@ function save_pipeline_deal_handler() {
         ));
     }
 
+    // Sales users can edit all deal fields (no restrictions)
     $data = array(
         'lead_id' => $lead_id,
         'property_type' => isset($_POST['property_type']) ? json_encode($_POST['property_type']) : null,
@@ -276,10 +343,14 @@ function save_pipeline_deal_handler() {
 // Delete Pipeline Deal
 add_action('wp_ajax_delete_pipeline_deal', 'delete_pipeline_deal_handler');
 function delete_pipeline_deal_handler() {
-    check_ajax_referer('delete_pipeline_deal', 'nonce');
+    // Verify nonce
+    if (!check_ajax_referer('delete_pipeline_deal', 'nonce', false)) {
+        wp_send_json_error('Security check failed. Please refresh the page and try again.');
+        return;
+    }
 
     if (!user_has_pipeline_access()) {
-        wp_send_json_error('Access denied');
+        wp_send_json_error('Access denied. You do not have permission to access this feature.');
         return;
     }
 

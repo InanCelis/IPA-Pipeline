@@ -261,6 +261,13 @@ function user_has_pipeline_access($user_id = null) {
         return true;
     }
 
+    // Sales role has access
+    $user = get_userdata($user_id);
+    if ($user && in_array('sales_role', $user->roles)) {
+        return true;
+    }
+
+    // Check whitelist
     global $wpdb;
     $table = $wpdb->prefix . 'pipeline_whitelist';
 
@@ -286,3 +293,21 @@ function update_overdue_invoices() {
     ");
 }
 add_action('init', 'update_overdue_invoices');
+
+// Ensure Sales role users can make AJAX requests
+add_action('init', 'pipeline_ensure_ajax_access_for_sales');
+function pipeline_ensure_ajax_access_for_sales() {
+    $sales_role = get_role('sales_role');
+    if ($sales_role) {
+        // Grant ALL necessary capabilities for AJAX and WordPress to work
+        $sales_role->add_cap('read', true);
+        $sales_role->add_cap('edit_posts', true);
+        $sales_role->add_cap('upload_files', true);
+        $sales_role->add_cap('edit_published_posts', true);
+        $sales_role->add_cap('publish_posts', true);
+        $sales_role->add_cap('delete_published_posts', true);
+
+        // Log the role capabilities for debugging
+        error_log('Sales role capabilities updated: ' . print_r(array_keys($sales_role->capabilities), true));
+    }
+}

@@ -553,6 +553,8 @@ sort($all_tags);
 </div>
 
 <script>
+var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+
 jQuery(document).ready(function($) {
     // Initialize Select2 for multiple selection
     if (typeof $.fn.select2 !== 'undefined') {
@@ -730,7 +732,9 @@ function saveLead() {
     }
 
     formData.append('action', 'save_pipeline_lead');
-    formData.append('nonce', '<?php echo wp_create_nonce("save_pipeline_lead"); ?>');
+    var nonceValue = '<?php echo wp_create_nonce("save_pipeline_lead"); ?>';
+    console.log('Nonce value:', nonceValue);
+    formData.append('nonce', nonceValue);
 
     jQuery.ajax({
         url: '<?php echo admin_url("admin-ajax.php"); ?>',
@@ -743,11 +747,15 @@ function saveLead() {
                 alert('Lead saved successfully!');
                 location.reload();
             } else {
+                console.log('Full response:', response);
                 alert('Error: ' + (response.data || 'Unknown error'));
             }
         },
-        error: function() {
-            alert('An error occurred while saving the lead.');
+        error: function(xhr, status, error) {
+            console.log('AJAX Error - Status:', xhr.status);
+            console.log('AJAX Error - Response:', xhr.responseText);
+            console.log('AJAX Error - Error:', error);
+            alert('An error occurred while saving the lead. Check console for details.');
         }
     });
 }

@@ -1082,9 +1082,15 @@ add_filter( 'user_has_cap', function( $caps, $cap, $args ) {
 }, 10, 3 );
 
 // CODE THAT RUNS EVERY TIME (on every admin page load)
+// BUT allow AJAX requests to go through!
 add_action( 'admin_init', function() {
+    // Allow AJAX requests - don't redirect if it's an AJAX call
+    if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+        return;
+    }
+
     $user = wp_get_current_user();
-     
+
     if ( in_array( 'sales_role', $user->roles ) ) {
         wp_safe_remote_get( home_url() );
         wp_redirect( home_url() );

@@ -443,6 +443,8 @@ $cities = get_terms(array('taxonomy' => 'property_city', 'hide_empty' => false))
 </div>
 
 <script>
+var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+
 jQuery(document).ready(function($) {
     // Initialize Select2 for multiple selection
     if (typeof $.fn.select2 !== 'undefined') {
