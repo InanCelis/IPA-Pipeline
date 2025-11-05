@@ -54,6 +54,23 @@ function save_partnership_invoice_handler() {
     // Payment Status
     $payment_status = isset($_POST['payment_status']) ? sanitize_text_field($_POST['payment_status']) : 'Pending';
 
+    // Currency
+    $currency_code = isset($_POST['currency_code']) ? sanitize_text_field($_POST['currency_code']) : 'USD';
+
+    // Calculate USD amount
+    $amount_usd = $total_amount;
+    if ($currency_code !== 'USD') {
+        // Get exchange rate
+        $table_exchange_rates = $wpdb->prefix . 'exchange_rates';
+        $exchange_rate = $wpdb->get_var($wpdb->prepare(
+            "SELECT exchange_rate FROM $table_exchange_rates WHERE currency_to = 'USD' AND currency_from = %s ORDER BY last_updated DESC LIMIT 1",
+            $currency_code
+        ));
+        if ($exchange_rate) {
+            $amount_usd = $total_amount * floatval($exchange_rate);
+        }
+    }
+
     // Payment Items
     $payment_items_json = isset($_POST['payment_items']) ? stripslashes($_POST['payment_items']) : '[]';
     $payment_items = json_decode($payment_items_json, true);
@@ -75,7 +92,9 @@ function save_partnership_invoice_handler() {
         'service_monthly_hours' => $service_monthly_hours,
         'scope_of_work' => $scope_of_work,
         'payment_status' => $payment_status,
-        'total_amount' => $total_amount
+        'total_amount' => $total_amount,
+        'currency_code' => $currency_code,
+        'amount_usd' => $amount_usd
     );
 
     if ($invoice_id > 0) {
@@ -358,6 +377,22 @@ function download_partnership_invoice_pdf_handler() {
 
 // Generate Partnership Invoice HTML
 function generate_partnership_invoice_html($invoice, $payment_items, $for_download = false) {
+    global $wpdb;
+
+    // Get currency symbol
+    $currency_code = !empty($invoice->currency_code) ? $invoice->currency_code : 'USD';
+    $currency_symbol = '$'; // Default to USD
+    if ($currency_code !== 'USD') {
+        $table_currencies = $wpdb->prefix . 'houzez_currencies';
+        $currency = $wpdb->get_row($wpdb->prepare(
+            "SELECT currency_symbol FROM $table_currencies WHERE currency_code = %s",
+            $currency_code
+        ));
+        if ($currency) {
+            $currency_symbol = $currency->currency_symbol;
+        }
+    }
+
     // Determine logo and company details based on invoice type
     if ($invoice->invoice_type === 'International Property Alerts') {
         $logo_url = 'https://internationalpropertyalerts.com/wp-content/uploads/2025/10/PDF-logo.png';
@@ -482,14 +517,14 @@ function generate_partnership_invoice_html($invoice, $payment_items, $for_downlo
             $html .= '<tr>
                 <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">' . esc_html($item->description) . '</td>
                 <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 10px;">' . date('m/d/Y', strtotime($item->payment_date)) . '</td>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: right; font-size: 10px;">$' . number_format($item->amount_due, 2) . '</td>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: right; font-size: 10px;">' . esc_html($currency_symbol) . number_format($item->amount_due, 2) . '</td>
             </tr>';
         }
     }
 
     $html .= '<tr style="background: #f8f9fa;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 10px;"><strong>Total:</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 10px;"><strong>$' . number_format($invoice->total_amount, 2) . '</strong></td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 10px;"><strong>' . esc_html($currency_symbol) . number_format($invoice->total_amount, 2) . '</strong></td>
             </tr>';
 
     $html .= '</tbody>

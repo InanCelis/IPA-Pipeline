@@ -473,6 +473,23 @@ function save_pipeline_invoice_handler() {
     $commission_rate = floatval($_POST['commission_rate']);
     $referral_fee = ($sale_price * $commission_rate) / 100;
 
+    // Currency
+    $currency_code = isset($_POST['currency_code']) ? sanitize_text_field($_POST['currency_code']) : 'USD';
+
+    // Calculate USD amount
+    $amount_usd = $referral_fee;
+    if ($currency_code !== 'USD') {
+        // Get exchange rate
+        $table_exchange_rates = $wpdb->prefix . 'exchange_rates';
+        $exchange_rate = $wpdb->get_var($wpdb->prepare(
+            "SELECT exchange_rate FROM $table_exchange_rates WHERE currency_to = 'USD' AND currency_from = %s ORDER BY last_updated DESC LIMIT 1",
+            $currency_code
+        ));
+        if ($exchange_rate) {
+            $amount_usd = $referral_fee * floatval($exchange_rate);
+        }
+    }
+
     $data = array(
         'lead_id' => $lead_id,
         'partnership_id' => isset($_POST['partnership_id']) ? intval($_POST['partnership_id']) : null,
@@ -490,6 +507,8 @@ function save_pipeline_invoice_handler() {
         'referral_fee_amount' => $referral_fee,
         'property_url' => esc_url_raw($_POST['property_url']),
         'payment_status' => sanitize_text_field($_POST['payment_status']),
+        'currency_code' => $currency_code,
+        'amount_usd' => $amount_usd
     );
 
     if ($invoice_id > 0) {
@@ -791,6 +810,22 @@ function download_invoice_pdf_handler() {
 
 // Generate Invoice HTML
 function generate_invoice_html($invoice, $for_download = false) {
+    global $wpdb;
+
+    // Get currency symbol
+    $currency_code = !empty($invoice->currency_code) ? $invoice->currency_code : 'USD';
+    $currency_symbol = '$'; // Default to USD
+    if ($currency_code !== 'USD') {
+        $table_currencies = $wpdb->prefix . 'houzez_currencies';
+        $currency = $wpdb->get_row($wpdb->prepare(
+            "SELECT currency_symbol FROM $table_currencies WHERE currency_code = %s",
+            $currency_code
+        ));
+        if ($currency) {
+            $currency_symbol = $currency->currency_symbol;
+        }
+    }
+
     $logo_url = 'https://internationalpropertyalerts.com/wp-content/uploads/2025/10/PDF-logo.png';
 
     $html = '<div style="font-family: Arial, sans-serif; font-size: 11px; min-height: 100vh; display: flex; flex-direction: column; margin: 0; padding: 0;">';
@@ -871,9 +906,9 @@ function generate_invoice_html($invoice, $for_download = false) {
         <tbody>
             <tr>
                 <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">' . esc_html($invoice->description ?: 'Referral Fee') . '</td>
-                <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">$' . number_format($invoice->sale_price, 2) . '</td>
+                <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">' . esc_html($currency_symbol) . number_format($invoice->sale_price, 2) . '</td>
                 <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">' . number_format($invoice->commission_rate, 2) . '%</td>
-                <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;"><strong>$' . number_format($invoice->referral_fee_amount, 2) . '</strong></td>
+                <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;"><strong>' . esc_html($currency_symbol) . number_format($invoice->referral_fee_amount, 2) . '</strong></td>
                 <td style="border: 1px solid #ddd; padding: 6px; font-size: 10px;">' . date('m/d/Y', strtotime($invoice->due_date)) . '</td>
             </tr>
         </tbody>

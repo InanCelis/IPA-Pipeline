@@ -71,7 +71,7 @@ $invoices = $wpdb->get_results("
     LIMIT $offset, $per_page
 ");
 
-// Get statistics
+// Get statistics (using USD amounts for consistency in reports)
 $stats = array(
     'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE is_active = 1"),
     'pending' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Pending' AND is_active = 1"),
@@ -79,9 +79,9 @@ $stats = array(
     'partial' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Partial' AND is_active = 1"),
     'fully_paid' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
     'overdue' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Overdue' AND is_active = 1"),
-    'total_amount' => $wpdb->get_var("SELECT SUM(total_amount) FROM $table_invoices WHERE is_active = 1"),
-    'paid_amount' => $wpdb->get_var("SELECT SUM(total_amount) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
-    'unpaid_amount' => $wpdb->get_var("SELECT SUM(total_amount) FROM $table_invoices WHERE payment_status != 'Fully Paid' AND is_active = 1"),
+    'total_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, total_amount, 0)) FROM $table_invoices WHERE is_active = 1"),
+    'paid_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, total_amount, 0)) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
+    'unpaid_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, total_amount, 0)) FROM $table_invoices WHERE payment_status != 'Fully Paid' AND is_active = 1"),
     'ipa_invoices' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE invoice_type = 'International Property Alerts' AND is_active = 1"),
     'primetask_invoices' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE invoice_type = 'Primetask VA Inc.' AND is_active = 1")
 );
@@ -93,6 +93,16 @@ $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partners
 $project_options = array_filter(explode("\n", get_option('partnership_field_invoice_project', '')));
 $package_tier_options = array_filter(explode("\n", get_option('partnership_field_invoice_package_tier', '')));
 $project_duration_options = array_filter(explode("\n", get_option('partnership_field_invoice_project_duration', '')));
+
+// Get currencies
+$table_currencies = $wpdb->prefix . 'houzez_currencies';
+$currencies = $wpdb->get_results("SELECT * FROM $table_currencies ORDER BY currency_name");
+
+// Create a currency symbol lookup array for table display
+$currency_symbols = array();
+foreach ($wpdb->get_results("SELECT currency_code, currency_symbol FROM $table_currencies") as $curr) {
+    $currency_symbols[$curr->currency_code] = $curr->currency_symbol;
+}
 ?>
 
 <style>
@@ -225,6 +235,7 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
             <th>Date Issued</th>
             <th>Due Date</th>
             <th>Amount</th>
+            <th>USD Amount</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -232,7 +243,7 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
     <tbody>
         <?php if (empty($invoices)) : ?>
             <tr>
-                <td colspan="9" class="no-results">No invoices found</td>
+                <td colspan="10" class="no-results">No invoices found</td>
             </tr>
         <?php else : ?>
             <?php foreach ($invoices as $invoice) :
@@ -251,7 +262,15 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
                     <td><?php echo esc_html($invoice->billed_to_name ?: $invoice->billed_to_company); ?></td>
                     <td><?php echo date('M d, Y', strtotime($invoice->date_issued)); ?></td>
                     <td><?php echo date('M d, Y', strtotime($invoice->due_date)); ?></td>
-                    <td><strong>$<?php echo number_format($invoice->total_amount, 2); ?></strong></td>
+                    <td><strong><?php
+                        $curr_code = !empty($invoice->currency_code) ? $invoice->currency_code : 'USD';
+                        $curr_symbol = isset($currency_symbols[$curr_code]) ? $currency_symbols[$curr_code] : '$';
+                        echo esc_html($curr_symbol) . number_format($invoice->total_amount, 2);
+                    ?></strong></td>
+                    <td><strong>$<?php
+                        $usd_amount = !empty($invoice->amount_usd) ? $invoice->amount_usd : $invoice->total_amount;
+                        echo number_format($usd_amount, 2);
+                    ?></strong></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
                     <td>
                         <?php
@@ -472,6 +491,24 @@ $project_duration_options = array_filter(explode("\n", get_option('partnership_f
                     <!-- Payment items will be dynamically added here -->
                 </div>
 
+                <!-- Currency Selection -->
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="currency_code">Currency <span style="color: red;">*</span></label>
+                    <select class="form-control" id="currency_code" name="currency_code" required onchange="updateCurrencyDisplay()">
+                        <?php if (!empty($currencies)): ?>
+                            <?php foreach ($currencies as $currency): ?>
+                                <option value="<?php echo esc_attr($currency->currency_code); ?>"
+                                        data-symbol="<?php echo esc_attr($currency->currency_symbol); ?>"
+                                        <?php echo $currency->currency_code === 'USD' ? 'selected' : ''; ?>>
+                                    <?php echo esc_html($currency->currency_name . ' (' . $currency->currency_code . ')'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="USD" data-symbol="$" selected>United States Dollar (USD)</option>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: right;">
                     <div style="font-size: 18px; color: #333; margin-bottom: 10px;">
                         <strong>Total Amount:</strong>
@@ -644,8 +681,15 @@ function calculateTotal() {
         const value = parseFloat(input.value) || 0;
         total += value;
     });
-    document.getElementById('total_amount_display').textContent = '$' + total.toFixed(2);
+    const currencySelect = document.getElementById('currency_code');
+    const selectedOption = currencySelect.options[currencySelect.selectedIndex];
+    const currencySymbol = selectedOption.getAttribute('data-symbol') || '$';
+    document.getElementById('total_amount_display').textContent = currencySymbol + total.toFixed(2);
     document.getElementById('total_amount').value = total.toFixed(2);
+}
+
+function updateCurrencyDisplay() {
+    calculateTotal();
 }
 
 function saveInvoice() {
@@ -732,6 +776,7 @@ function editInvoice(invoiceId) {
                 document.getElementById('service_monthly_hours').value = invoice.service_monthly_hours || '';
                 document.getElementById('scope_of_work').value = invoice.scope_of_work || '';
                 document.getElementById('payment_status').value = invoice.payment_status;
+                document.getElementById('currency_code').value = invoice.currency_code || 'USD';
 
                 // Load payment items
                 document.getElementById('payment_items_container').innerHTML = '';

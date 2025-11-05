@@ -83,6 +83,8 @@ function partnership_management_install() {
         scope_of_work text DEFAULT NULL,
         payment_status varchar(50) DEFAULT 'Pending',
         total_amount decimal(15,2) DEFAULT 0.00,
+        currency_code varchar(10) DEFAULT 'USD',
+        amount_usd decimal(15,2) DEFAULT 0.00,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_active tinyint(1) DEFAULT 1,
@@ -140,7 +142,7 @@ function partnership_management_install() {
     partnership_create_default_options();
     
     // Set version
-    update_option('partnership_management_db_version', '1.2');
+    update_option('partnership_management_db_version', '1.3');
 }
 
 function partnership_insert_sample_data() {
@@ -264,7 +266,7 @@ function partnership_management_uninstall() {
 add_action('admin_init', 'partnership_check_db_version');
 function partnership_check_db_version() {
     $current_version = get_option('partnership_management_db_version', '0');
-    if (version_compare($current_version, '1.2', '<')) {
+    if (version_compare($current_version, '1.3', '<')) {
         partnership_management_install();
     }
 }

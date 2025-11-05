@@ -78,7 +78,7 @@ $invoices = $wpdb->get_results("
     LIMIT $offset, $per_page
 ");
 
-// Get statistics
+// Get statistics (using USD amounts for consistency in reports)
 $stats = array(
     'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE is_active = 1"),
     'pending' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Pending' AND is_active = 1"),
@@ -86,13 +86,23 @@ $stats = array(
     'partial' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Partial' AND is_active = 1"),
     'fully_paid' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
     'overdue' => $wpdb->get_var("SELECT COUNT(*) FROM $table_invoices WHERE payment_status = 'Overdue' AND is_active = 1"),
-    'total_amount' => $wpdb->get_var("SELECT SUM(referral_fee_amount) FROM $table_invoices WHERE is_active = 1"),
-    'paid_amount' => $wpdb->get_var("SELECT SUM(referral_fee_amount) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
-    'unpaid_amount' => $wpdb->get_var("SELECT SUM(referral_fee_amount) FROM $table_invoices WHERE payment_status != 'Fully Paid' AND is_active = 1")
+    'total_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, referral_fee_amount, 0)) FROM $table_invoices WHERE is_active = 1"),
+    'paid_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, referral_fee_amount, 0)) FROM $table_invoices WHERE payment_status = 'Fully Paid' AND is_active = 1"),
+    'unpaid_amount' => $wpdb->get_var("SELECT SUM(COALESCE(amount_usd, referral_fee_amount, 0)) FROM $table_invoices WHERE payment_status != 'Fully Paid' AND is_active = 1")
 );
 
 // Get partnerships for dropdown
 $partnerships = $wpdb->get_results("SELECT id, company_name FROM $table_partnerships WHERE agreement_status = 'Signed' ORDER BY company_name");
+
+// Get currencies
+$table_currencies = $wpdb->prefix . 'houzez_currencies';
+$currencies = $wpdb->get_results("SELECT * FROM $table_currencies ORDER BY currency_name");
+
+// Create a currency symbol lookup array for table display
+$currency_symbols = array();
+foreach ($wpdb->get_results("SELECT currency_code, currency_symbol FROM $table_currencies") as $curr) {
+    $currency_symbols[$curr->currency_code] = $curr->currency_symbol;
+}
 ?>
 
 <style>
@@ -216,6 +226,7 @@ $for_payment_deals = $wpdb->get_results("
             <th>Date Issued</th>
             <th>Due Date</th>
             <th>Amount</th>
+            <th>USD Amount</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -223,7 +234,7 @@ $for_payment_deals = $wpdb->get_results("
     <tbody>
         <?php if (empty($invoices)) : ?>
             <tr>
-                <td colspan="8" class="no-results">No invoices found</td>
+                <td colspan="9" class="no-results">No invoices found</td>
             </tr>
         <?php else : ?>
             <?php foreach ($invoices as $invoice) :
@@ -235,7 +246,15 @@ $for_payment_deals = $wpdb->get_results("
                     <td><?php echo esc_html($invoice->partnership_company ?: $invoice->billed_to_company); ?></td>
                     <td><?php echo date('M d, Y', strtotime($invoice->date_issued)); ?></td>
                     <td><?php echo date('M d, Y', strtotime($invoice->due_date)); ?></td>
-                    <td><strong>$<?php echo number_format($invoice->referral_fee_amount, 2); ?></strong></td>
+                    <td><strong><?php
+                        $curr_code = !empty($invoice->currency_code) ? $invoice->currency_code : 'USD';
+                        $curr_symbol = isset($currency_symbols[$curr_code]) ? $currency_symbols[$curr_code] : '$';
+                        echo esc_html($curr_symbol) . number_format($invoice->referral_fee_amount, 2);
+                    ?></strong></td>
+                    <td><strong>$<?php
+                        $usd_amount = !empty($invoice->amount_usd) ? $invoice->amount_usd : $invoice->referral_fee_amount;
+                        echo number_format($usd_amount, 2);
+                    ?></strong></td>
                     <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
                     <td>
                         <?php
@@ -400,6 +419,22 @@ Date of Sale:</textarea>
                         <input type="number" class="form-control" id="commission_rate" name="commission_rate" step="0.01" required onchange="calculateReferralFee()">
                     </div>
                     <div class="form-group">
+                        <label>Currency <span style="color: red;">*</span></label>
+                        <select class="form-control" id="currency_code" name="currency_code" required onchange="updatePipelineCurrencyDisplay()">
+                            <?php if (!empty($currencies)): ?>
+                                <?php foreach ($currencies as $currency): ?>
+                                    <option value="<?php echo esc_attr($currency->currency_code); ?>"
+                                            data-symbol="<?php echo esc_attr($currency->currency_symbol); ?>"
+                                            <?php echo $currency->currency_code === 'USD' ? 'selected' : ''; ?>>
+                                        <?php echo esc_html($currency->currency_name . ' (' . $currency->currency_code . ')'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="USD" data-symbol="$" selected>United States Dollar (USD)</option>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>Referral Fee Amount</label>
                         <input type="number" class="form-control" id="referral_fee_display" step="0.01" readonly style="background: #f0f0f0; font-weight: bold;">
                     </div>
@@ -557,6 +592,12 @@ function calculateReferralFee() {
     const commissionRate = parseFloat(document.getElementById('commission_rate').value) || 0;
     const referralFee = (salePrice * commissionRate) / 100;
     document.getElementById('referral_fee_display').value = referralFee.toFixed(2);
+    updatePipelineCurrencyDisplay();
+}
+
+function updatePipelineCurrencyDisplay() {
+    // This function updates the display to use the selected currency symbol
+    // The actual value doesn't change, just the visual representation
 }
 
 function editInvoice(invoice) {
@@ -592,6 +633,7 @@ function editInvoice(invoice) {
         document.getElementById('referral_fee_display').value = invoice.referral_fee_amount || '';
         document.getElementById('property_url').value = invoice.property_url || '';
         document.getElementById('payment_status').value = invoice.payment_status || 'Pending';
+        document.getElementById('currency_code').value = invoice.currency_code || 'USD';
 
         // Make Select Client and Partner Company read-only when editing
         document.getElementById('lead_id').setAttribute('disabled', 'disabled');

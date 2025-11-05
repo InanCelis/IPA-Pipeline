@@ -106,6 +106,8 @@ function create_pipeline_tables() {
         referral_fee_amount decimal(15,2) DEFAULT 0,
         property_url text DEFAULT NULL,
         payment_status varchar(50) DEFAULT 'Pending',
+        currency_code varchar(10) DEFAULT 'USD',
+        amount_usd decimal(15,2) DEFAULT 0.00,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_active tinyint(1) DEFAULT 1,
