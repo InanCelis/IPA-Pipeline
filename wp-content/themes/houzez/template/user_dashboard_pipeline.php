@@ -23,8 +23,15 @@ $hpage = isset($_GET['hpage']) ? sanitize_text_field($_GET['hpage']) : 'leads';
 
 get_header();
 ?>
-
+<?php get_template_part('template-parts/dashboard/mobile-header'); ?>
 <style>
+    html {
+        margin-top: 0 !important;
+    }
+    body {
+        padding-top: 0 !important;
+    }
+    
     header.elementor.elementor-17380.elementor-location-header,
     footer.elementor.elementor-17737.elementor-location-footer {
         display: none;

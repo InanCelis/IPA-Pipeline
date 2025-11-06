@@ -250,29 +250,29 @@ foreach ($wpdb->get_results("SELECT currency_code, currency_symbol FROM $table_c
                 $status_class = 'status-' . strtolower(str_replace(' ', '-', $invoice->payment_status));
             ?>
                 <tr>
-                    <td><strong><?php echo esc_html($invoice->invoice_number); ?></strong></td>
-                    <td>
+                    <td data-label="Invoice #"><strong><?php echo esc_html($invoice->invoice_number); ?></strong></td>
+                    <td data-label="Type">
                         <?php if ($invoice->invoice_type === 'International Property Alerts') : ?>
                             <span style="background: #2196f3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">IPA</span>
                         <?php else : ?>
                             <span style="background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">PRIMETASK</span>
                         <?php endif; ?>
                     </td>
-                    <td><?php echo esc_html($invoice->partnership_company); ?></td>
-                    <td><?php echo esc_html($invoice->billed_to_name ?: $invoice->billed_to_company); ?></td>
-                    <td><?php echo date('M d, Y', strtotime($invoice->date_issued)); ?></td>
-                    <td><?php echo date('M d, Y', strtotime($invoice->due_date)); ?></td>
-                    <td><strong><?php
+                    <td data-label="Partner"><?php echo esc_html($invoice->partnership_company); ?></td>
+                    <td data-label="Billed To"><?php echo esc_html($invoice->billed_to_name ?: $invoice->billed_to_company); ?></td>
+                    <td data-label="Date Issued"><?php echo date('M d, Y', strtotime($invoice->date_issued)); ?></td>
+                    <td data-label="Due Date"><?php echo date('M d, Y', strtotime($invoice->due_date)); ?></td>
+                    <td data-label="Amount"><strong><?php
                         $curr_code = !empty($invoice->currency_code) ? $invoice->currency_code : 'USD';
                         $curr_symbol = isset($currency_symbols[$curr_code]) ? $currency_symbols[$curr_code] : '$';
                         echo esc_html($curr_symbol) . number_format($invoice->total_amount, 2);
                     ?></strong></td>
-                    <td><strong>$<?php
+                    <td data-label="USD Amount"><strong>$<?php
                         $usd_amount = !empty($invoice->amount_usd) ? $invoice->amount_usd : $invoice->total_amount;
                         echo number_format($usd_amount, 2);
                     ?></strong></td>
-                    <td><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
-                    <td>
+                    <td data-label="Status"><span class="status-badge <?php echo $status_class; ?>"><?php echo esc_html($invoice->payment_status); ?></span></td>
+                    <td data-label="Actions">
                         <?php
                         // Get comment count for this invoice
                         $comments_table = $wpdb->prefix . 'invoice_comments';

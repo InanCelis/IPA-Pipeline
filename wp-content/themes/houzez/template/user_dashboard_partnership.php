@@ -21,6 +21,12 @@ get_header();
 ?>
 
 <style>
+    html {
+        margin-top: 0 !important;
+    }
+    body {
+        padding-top: 0 !important;
+    }
     header.elementor.elementor-17380.elementor-location-header, 
     footer.elementor.elementor-17737.elementor-location-footer {
         display: none;
@@ -410,27 +416,148 @@ get_header();
         border-radius: 4px;
         margin-top: 10px;
     }
-    
+
+    /* Partnership-specific mobile styles */
+    @media (max-width: 991.98px) {
+        .partnership-tabs {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .partnership-tabs a {
+            padding: 12px 20px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .partnership-content {
+            padding: 20px 15px;
+        }
+
+        .partnership-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .partnership-title {
+            font-size: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
     @media (max-width: 768px) {
         .form-grid {
             grid-template-columns: 1fr;
         }
-        
+
         .filter-row {
             flex-direction: column;
         }
-        
+
+        .filter-group {
+            min-width: 100%;
+        }
+
         .partnership-table {
             font-size: 12px;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        
-        .partnership-table th,
+
+        .partnership-table thead {
+            display: none;
+        }
+
+        .partnership-table tbody,
+        .partnership-table tr,
         .partnership-table td {
-            padding: 8px;
+            display: block;
+            width: 100%;
+        }
+
+        .partnership-table tr {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .partnership-table td {
+            padding: 8px 0;
+            border: none;
+            text-align: left;
+            position: relative;
+            padding-left: 50%;
+        }
+
+        .partnership-table td:before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0;
+            width: 45%;
+            padding-right: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .action-buttons {
+            justify-content: flex-start;
+            padding-left: 50%;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            padding: 20px;
+        }
+
+        .modal-content {
+            width: 95%;
+            margin: 20px auto;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+        }
+
+        .modal-header,
+        .modal-footer {
+            padding: 15px 20px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .partnership-tabs a {
+            padding: 10px 15px;
+            font-size: 13px;
+        }
+
+        .partnership-title {
+            font-size: 18px;
+        }
+
+        .btn-sm {
+            padding: 5px 8px;
+            font-size: 11px;
+        }
+
+        .stat-value {
+            font-size: 24px;
         }
     }
 </style>
-
+<?php get_template_part('template-parts/dashboard/mobile-header'); ?>
 <header class="header-main-wrap dashboard-header-main-wrap">
     <div class="dashboard-header-wrap">
         <div class="d-flex align-items-center">

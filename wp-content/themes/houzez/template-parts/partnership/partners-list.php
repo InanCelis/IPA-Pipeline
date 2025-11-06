@@ -197,8 +197,8 @@ $countries = $wpdb->get_col("SELECT DISTINCT country FROM {$table_name} WHERE co
                 ?>
                 <!-- <?php print_r($partner) ?> -->
                 <tr class="status-upload-<?php echo esc_attr(strtolower(str_replace(' ', '-', $partner->property_upload_status))); ?>">
-                    <td>
-                        
+                    <td data-label="Company">
+
                         <strong><?php echo esc_html($partner->company_name); ?></strong>
                         <?php if($partner->website): ?>
                             <br><a href="<?php echo esc_url($partner->website); ?>" target="_blank" style="font-size: 12px; color: #666;">
@@ -208,24 +208,24 @@ $countries = $wpdb->get_col("SELECT DISTINCT country FROM {$table_name} WHERE co
                         <br>
                         <small><?php echo esc_html($partner->manner_upload); ?></small>
                     </td>
-                    <td>
+                    <td data-label="Status">
                         <span class="status-badge status-<?php echo esc_attr(strtolower(str_replace(' ', '-', $partner->agreement_status))); ?>">
                             <?php echo esc_html($partner->agreement_status ?: 'None'); ?>
                         </span>
                     </td>
-                    <td><?php echo esc_html($partner->country ?: 'N/A'); ?></td>
-                    <td><?php echo esc_html($partner->industry ?: 'N/A'); ?></td>
-                    <td><?php echo esc_html($partner->commission_rate ?: 'N/A'); ?></td>
-                    <td><strong><?php echo esc_html($partner->number_of_leads ?: '0'); ?></strong>
-                    <td><strong><?php echo esc_html($partner->total_properties ?: '0'); ?></strong></td>
-                    <td><?php echo esc_html($partner->person_in_charge ?: 'N/A'); ?></td>
-                    <td>
+                    <td data-label="Country"><?php echo esc_html($partner->country ?: 'N/A'); ?></td>
+                    <td data-label="Industry"><?php echo esc_html($partner->industry ?: 'N/A'); ?></td>
+                    <td data-label="Commission"><?php echo esc_html($partner->commission_rate ?: 'N/A'); ?></td>
+                    <td data-label="Number of Leads"><strong><?php echo esc_html($partner->number_of_leads ?: '0'); ?></strong>
+                    <td data-label="Properties"><strong><?php echo esc_html($partner->total_properties ?: '0'); ?></strong></td>
+                    <td data-label="Person in Charge"><?php echo esc_html($partner->person_in_charge ?: 'N/A'); ?></td>
+                    <td data-label="Contact">
                         <?php echo esc_html($partner->contact_person ?: 'N/A'); ?>
                         <?php if($partner->mobile): ?>
                             <br><small><?php echo esc_html($partner->mobile); ?></small>
                         <?php endif; ?>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                         <div class="action-buttons">
                             <button class="btn btn-primary btn-sm" onclick='openModal("edit", <?php echo json_encode($partner); ?>)'>
                                 <i class="houzez-icon icon-pencil"></i>

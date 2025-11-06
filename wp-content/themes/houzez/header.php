@@ -24,7 +24,7 @@ $houzez_local = houzez_get_localization();
 
 	<main id="main-wrap" class="main-wrap main-wrap-js dashboard-main-wrap">
 
-	<?php get_template_part('template-parts/header/header-mobile'); ?>
+	<?php get_template_part('template-parts/dashboard/mobile-header'); ?>
 
 <?php } else { ?>
 

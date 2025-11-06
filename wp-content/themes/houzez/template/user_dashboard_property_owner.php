@@ -96,6 +96,13 @@ if ($properties_without_owner > 0) {
 get_header();
 ?>
 <style>
+    html {
+        margin-top: 0 !important;
+    }
+    body {
+        padding-top: 0 !important;
+    }
+
     header.elementor.elementor-17380.elementor-location-header, 
     footer.elementor.elementor-17737.elementor-location-footer {
         display: none;
@@ -198,8 +205,8 @@ get_header();
         color: #6c757d;
         margin-bottom: 0;
     }
-</style> 
-
+</style>
+<?php get_template_part('template-parts/dashboard/mobile-header'); ?>
 <header class="header-main-wrap dashboard-header-main-wrap">
     <div class="dashboard-header-wrap">
         <div class="d-flex align-items-center">
