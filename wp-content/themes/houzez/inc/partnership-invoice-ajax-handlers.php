@@ -494,9 +494,22 @@ function generate_partnership_invoice_html($invoice, $payment_items, $for_downlo
 
     // Scope of Work
     if ($invoice->scope_of_work) {
+        // Process scope of work to add spacing between bullet points
+        $scope_lines = explode("\n", $invoice->scope_of_work);
+        $processed_scope = '';
+        foreach ($scope_lines as $line) {
+            $trimmed = trim($line);
+            // Add margin-bottom to lines that start with bullet points
+            if (preg_match('/^[•\-\*]/', $trimmed)) {
+                $processed_scope .= '<div style="margin-bottom: 8px; line-height: 1.2;">' . esc_html($line) . '</div>';
+            } else if (!empty($trimmed)) {
+                $processed_scope .= '<div style="line-height: 1.2;">' . esc_html($line) . '</div>';
+            }
+        }
+
         $html .= '<div style="margin-bottom: 25px;">
             <h3 style="margin-bottom: 4px; color: #333; font-size: 12px;">Scope of Work:</h3>
-            <div style="white-space: pre-line; line-height: 0.7; font-size: 10px;">' . nl2br(esc_html($invoice->scope_of_work)) . '</div>
+            <div style="font-size: 10px;">' . $processed_scope . '</div>
         </div>';
     }
 

@@ -582,6 +582,8 @@ jQuery(function ($) {
       /*----------------------------------------------------------
        * Half Map Ajax Search
        *----------------------------------------------------------*/
+      var houzez_ajax_request = null; // Store AJAX request for aborting
+
       var houzez_half_map_listings = function (current_page) {
         var ajax_container = $("#houzez_ajax_container");
         var ajax_map_wrap = $(".map-wrap");
@@ -590,7 +592,12 @@ jQuery(function ($) {
         var sortby = $("#ajax_sort_properties").val();
         var item_layout = $(".listing-view").data("layout");
 
-        $.ajax({
+        // Abort previous AJAX request if it's still running
+        if (houzez_ajax_request != null && houzez_ajax_request.readyState != 4) {
+          houzez_ajax_request.abort();
+        }
+
+        houzez_ajax_request = $.ajax({
           type: "GET",
           dataType: "json",
           url: ajaxurl,
@@ -682,10 +689,17 @@ jQuery(function ($) {
             return false;
           },
           error: function (xhr, ajaxOptions, thrownError) {
-            console.log(xhr.status);
-            console.log(xhr.responseText);
-            console.log(thrownError);
+            // Only log error if it's not an abort
+            if (xhr.statusText !== 'abort') {
+              console.log(xhr.status);
+              console.log(xhr.responseText);
+              console.log(thrownError);
+            }
           },
+          complete: function (xhr, status) {
+            // Always hide loading spinner when request completes (success, error, or abort)
+            $(".houzez-map-loading").hide();
+          }
         });
         return false;
       };
