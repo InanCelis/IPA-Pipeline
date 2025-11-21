@@ -75,7 +75,7 @@ function save_pipeline_lead_handler() {
     $is_sales_role = in_array('sales_role', $current_user->roles);
 
     if ($is_sales_role && $lead_id > 0) {
-        // Sales role can only edit: contact info (name, email, phone) and status
+        // Sales role can edit: contact info (name, email, phone), status, and assigned_to
         // For updates, only include editable fields
         $data = array(
             'fullname' => sanitize_text_field($_POST['fullname']),
@@ -84,6 +84,7 @@ function save_pipeline_lead_handler() {
             'email' => sanitize_email($_POST['email']),
             'contact_number' => sanitize_text_field($_POST['contact_number']),
             'status' => sanitize_text_field($_POST['status']),
+            'assigned_to' => sanitize_text_field($_POST['assigned_to']),
         );
     } else {
         // Admins and other roles can edit all fields

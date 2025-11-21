@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'person_in_charge' => sanitize_text_field($_POST['person_in_charge']),
                     'contact_person' => sanitize_text_field($_POST['contact_person']),
                     'mobile' => sanitize_text_field($_POST['mobile']),
-                    'email' => sanitize_email($_POST['email']),
+                    'email' => sanitize_text_field($_POST['email']),
                     'registered_office_address' => sanitize_text_field($_POST['registered_office_address']),
                     'position' => sanitize_text_field($_POST['position']),
                     'updated_at' => current_time('mysql')
@@ -441,7 +441,7 @@ $countries = $wpdb->get_col("SELECT DISTINCT country FROM {$table_name} WHERE co
                     
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" name="email" id="email" class="form-control">
+                        <input type="text" name="email" id="email" class="form-control">
                     </div>
 
                     <div class="form-group">

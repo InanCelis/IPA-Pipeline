@@ -1637,6 +1637,10 @@ if( ! function_exists('houzez_user_posts_count') ) {
     function houzez_user_posts_count( $post_status = 'any', $mine = false, $post_type = 'property' ) {
         $userID = get_current_user_id();
 
+        // Check if user is sales_role
+        $current_user = wp_get_current_user();
+        $is_sales_role = in_array('sales_role', $current_user->roles);
+
         // Common arguments for both queries
         $args = [
             'post_type'      => $post_type,
@@ -1645,16 +1649,17 @@ if( ! function_exists('houzez_user_posts_count') ) {
             'fields'         => 'ids', // Fetch only the IDs for performance
         ];
 
-        if( houzez_is_admin() || houzez_is_editor() ) {
-            
+        if( houzez_is_admin() || houzez_is_editor() || $is_sales_role ) {
+
             if( $mine ) {
-                $args['author'] = $userID; 
+                $args['author'] = $userID;
             }
+            // For admin, editor, and sales_role: if not $mine, show all properties (no author filter)
 
         } else if( houzez_is_agency() ) {
-            
+
             if( $mine ) {
-                $args['author'] = $userID; 
+                $args['author'] = $userID;
             } else {
                 $agents = houzez_get_agency_agents($userID);
                 if( $agents ) {
@@ -1667,7 +1672,7 @@ if( ! function_exists('houzez_user_posts_count') ) {
                 }
             }
         } else {
-            $args['author'] = $userID; 
+            $args['author'] = $userID;
         }
 
         // Query for counting all records

@@ -486,9 +486,9 @@ sort($all_tags);
                             <option value="Cold Lead">Cold Lead</option>
                         </select>
                     </div>
-                    <div class="form-group <?php echo ($is_sales_user && !$is_admin) ? 'sales-readonly' : ''; ?>">
+                    <div class="form-group">
                         <label>Assigned To</label>
-                        <select class="form-control" id="assigned_to" name="assigned_to" <?php echo ($is_sales_user && !$is_admin) ? 'disabled' : ''; ?>>
+                        <select class="form-control" id="assigned_to" name="assigned_to">
                             <option value="">Select Sales Person</option>
                             <?php foreach ($sales_user_list as $sales_user) : ?>
                                 <option value="<?php echo esc_attr($sales_user->ID); ?>"><?php echo esc_html($sales_user->display_name); ?></option>

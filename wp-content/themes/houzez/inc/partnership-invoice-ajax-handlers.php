@@ -166,6 +166,29 @@ function save_partnership_invoice_handler() {
     ));
 }
 
+// // Generate Partnership Invoice Number
+// function generate_partnership_invoice_number($invoice_type, $date_issued) {
+//     global $wpdb;
+//     $table_invoices = $wpdb->prefix . 'partnership_invoices';
+
+//     $date = new DateTime($date_issued);
+//     $year = $date->format('Y');
+//     $month = $date->format('m');
+
+//     // Determine company code
+//     $company_code = ($invoice_type === 'International Property Alerts') ? 'IPAP' : 'PVIP';
+
+//     // Get count of invoices for this month and type
+//     $prefix = "INV-{$year}-{$month}-{$company_code}-";
+//     $count = $wpdb->get_var($wpdb->prepare(
+//         "SELECT COUNT(*) FROM $table_invoices WHERE invoice_number LIKE %s",
+//         $wpdb->esc_like($prefix) . '%'
+//     ));
+
+//     $number = str_pad($count + 1, 5, '0', STR_PAD_LEFT);
+//     return $prefix . $number;
+// }
+
 // Generate Partnership Invoice Number
 function generate_partnership_invoice_number($invoice_type, $date_issued) {
     global $wpdb;
@@ -178,14 +201,29 @@ function generate_partnership_invoice_number($invoice_type, $date_issued) {
     // Determine company code
     $company_code = ($invoice_type === 'International Property Alerts') ? 'IPAP' : 'PVIP';
 
-    // Get count of invoices for this month and type
+    // Prefix format
     $prefix = "INV-{$year}-{$month}-{$company_code}-";
-    $count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_invoices WHERE invoice_number LIKE %s",
+
+    // Get the latest invoice number with this prefix
+    $last_invoice = $wpdb->get_var($wpdb->prepare(
+        "SELECT invoice_number 
+         FROM $table_invoices 
+         WHERE invoice_number LIKE %s 
+         ORDER BY invoice_number DESC 
+         LIMIT 1",
         $wpdb->esc_like($prefix) . '%'
     ));
 
-    $number = str_pad($count + 1, 5, '0', STR_PAD_LEFT);
+    // Extract the last 5 digits
+    if ($last_invoice) {
+        $last_number = intval(substr($last_invoice, -5));
+    } else {
+        $last_number = 0;
+    }
+
+    // Next invoice number
+    $number = str_pad($last_number + 1, 5, '0', STR_PAD_LEFT);
+
     return $prefix . $number;
 }
 

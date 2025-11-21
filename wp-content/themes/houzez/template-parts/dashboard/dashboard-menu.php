@@ -240,7 +240,7 @@ if (user_has_pipeline_access() || $is_sales_role) {
 				</li>';
 		}
 
-		if( !empty( $dashboard_properties ) && houzez_check_role() && !$is_sales_role_user ) {
+		if( !empty( $dashboard_properties ) && houzez_check_role() || $is_sales_role_user ) {
 			$properties_menu = '';
 			$properties_menu .= '<li class="side-menu-item '.esc_attr($parent_props).'">
 					<a '.esc_attr( $ac_props ).' href="'.esc_url($dashboard_properties).'">

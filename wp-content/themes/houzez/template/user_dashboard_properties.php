@@ -60,16 +60,21 @@ $args = [
 
 $args = houzez_prop_sort ( $args );
 
-if( houzez_is_admin() || houzez_is_editor() ) {
+// Check if user is sales_role
+$current_user_obj = wp_get_current_user();
+$is_sales_role = in_array('sales_role', $current_user_obj->roles);
+
+if( houzez_is_admin() || houzez_is_editor() || $is_sales_role ) {
     if( isset( $_GET['user'] ) && $_GET['user'] != '' ) {
         $args['author'] = intval($_GET['user']);
 
     } else if( isset( $_GET['prop_status'] ) && $_GET['prop_status'] == 'mine' ) {
         $args['author'] = $userID;
     }
+    // For admin, editor, and sales_role: if no user/mine filter, show all properties (no author restriction)
 } else if( houzez_is_agency() ) {
     $agents = houzez_get_agency_agents($userID);
-    
+
     if( isset( $_GET['user'] ) && $_GET['user'] != '' ) {
         $requested_user = intval($_GET['user']);
         // Only set author if requested user is current user or one of their agents
